@@ -1,0 +1,25 @@
+plugins {
+    kotlin("jvm") version "2.2.10"
+}
+
+group = "io.github.catizard"
+version = "1.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+
+dependencies {
+    implementation("org.slf4j:slf4j-simple:2.0.3")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.3")
+    testImplementation("com.github.Catizard:jbms-parser:d4e1b5a4ae")
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+kotlin {
+    jvmToolchain(17)
+}
