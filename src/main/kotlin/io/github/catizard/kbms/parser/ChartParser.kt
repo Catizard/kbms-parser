@@ -68,12 +68,12 @@ open class ParseContext(
     val selectedRandoms: List<Int>? = null,
     var base: Int = 36,
     var bpm: Double = 0.0,
-    val wavList: MutableList<String> = mutableListOf(),
+    val wavList: MutableList<String> = ArrayList(62 * 62),
     // xx -> index of wavList
-    private val wavMap: MutableMap<Int, Int> = mutableMapOf(),
-    val bgaList: MutableList<String> = mutableListOf(),
+    private val wavMap: Array<Int?> = arrayOfNulls(62 * 62),
+    val bgaList: MutableList<String> = ArrayList(62 * 62),
     // xx -> index of bgaList
-    private val bgaMap: MutableMap<Int, Int> = mutableMapOf(),
+    private val bgaMap: Array<Int?> = arrayOfNulls(62 * 62),
     val timelines: MutableList<Timeline> = mutableListOf(),
 ) {
     private var selectedRandomCount = 0

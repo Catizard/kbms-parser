@@ -1,7 +1,5 @@
 package io.github.catizard.kbms.parser
 
-import kotlin.experimental.and
-
 fun parseXX(base: Int, x1: Char, x2: Char): Int? = if (base == 62) parseInt62(x1, x2) else parseInt36(x1, x2)
 
 fun parseInt36(x1: Char, x2: Char): Int? {
@@ -48,14 +46,11 @@ private fun conv62(c: Char): Int? {
     }
 }
 
-/**
- * TODO: Use pre-calculated table instead of [Character.forDigit]
- */
+private val HEX_BYTES: Array<String> = (0..<256).map { i -> String.format("%02x", i) }.toTypedArray()
 fun convertHexString(data: ByteArray): String {
     val sb = StringBuilder(data.size * 2)
     for (b in data) {
-        sb.append(Character.forDigit(b.rotateRight(4).and(0xf).toInt(), 16))
-        sb.append(Character.forDigit(b.and(0xf).toInt(), 16))
+        sb.append(HEX_BYTES[b.toInt() and 0xFF])
     }
     return sb.toString()
 }

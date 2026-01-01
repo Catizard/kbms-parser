@@ -9,7 +9,6 @@ import io.github.catizard.kbms.parser.bms.BMSParser
 import io.github.catizard.kbms.parser.stun
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
-import java.nio.file.FileSystem
 import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,18 +19,22 @@ import io.github.catizard.jbms.parser.MineNote as UpstreamMineNote
 import io.github.catizard.jbms.parser.Note as UpstreamNote
 
 class SmokeTest {
-    companion object { val logger = KotlinLogging.logger {  } }
+    companion object {
+        val logger = KotlinLogging.logger { }
+    }
 
     @Test
     fun smokeTest() {
+        val testFile = System.getenv("KBMS.TestFile") ?: return
         val parser = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
-        val model = parser.parse(Paths.get("/home/emuzus/Downloads/tmp/#B2FFFF/_11_SP_BEGINNER.bms"))
+        val model = parser.parse(Paths.get(testFile))
         println(model)
     }
 
     @Test
     fun clapTest() {
-        val files = File("/home/emuzus/Downloads/tmp/#B2FFFF/").listFiles()?.filter { it.path.endsWith(".bms") }
+        val testDirectory = System.getenv("KBMS.TestDirectory") ?: return
+        val files = fetchAllBMSFiles(File(testDirectory))
         val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val upstream = BMSDecoder()
         files?.forEachIndexed { i, file ->
@@ -51,6 +54,34 @@ class SmokeTest {
             logger.info { "${i}th clap test ended. Real cost: ${realCost}ms, upstream cost: ${expectedCost}ms" }
             check(realModel, expectedModel)
         }
+    }
+
+    private fun fetchAllBMSFiles(directory: File): List<File> {
+        val bmsFiles = mutableListOf<File>()
+
+        if (!directory.exists() || !directory.isDirectory) {
+            return bmsFiles
+        }
+
+        val interestedExts = setOf("bms", "bme", "bml", "pms")
+
+        fun walkDir(currentDir: File) {
+            val files = currentDir.listFiles() ?: return
+
+            for (file in files) {
+                if (file.isDirectory) {
+                    walkDir(file)
+                } else if (file.isFile) {
+                    val ext = file.extension.lowercase()
+                    if (ext in interestedExts) {
+                        bmsFiles.add(file)
+                    }
+                }
+            }
+        }
+
+        walkDir(directory)
+        return bmsFiles
     }
 
     private fun check(real: BMSModel, expected: UpstreamBMSModel) {
@@ -144,6 +175,7 @@ class SmokeTest {
                 assertEquals(expectedLongNote.isEnd, real.end)
                 // TODO: Check long note type here
             }
+
             is MineNote -> {
                 val expectedMineNote = expected as UpstreamMineNote
                 assertEquals(expectedMineNote.damage, real.damage)

@@ -14,11 +14,11 @@ import io.github.catizard.kbms.parser.parseInt62
 import io.github.catizard.kbms.parser.ChartParser
 import io.github.catizard.kbms.parser.ChartParserConfig
 import io.github.catizard.kbms.parser.ParseContext
+import io.github.catizard.kbms.parser.ReservedWord
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.BufferedReader
-import java.io.ByteArrayInputStream
+import java.io.FileInputStream
 import java.io.InputStreamReader
-import java.nio.file.Files
 import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.*
@@ -27,6 +27,16 @@ import kotlin.math.abs
 val logger = KotlinLogging.logger {}
 
 class BMSParser(config: ChartParserConfig) : ChartParser(config) {
+    companion object {
+        val BMSReservedWords = ReservedWord<BMSParseContext>()
+
+        init {
+            CommandWord.entries.forEach { cw -> BMSReservedWords.insert(cw.name, cw.action) }
+            ControlWord.entries.forEach { cw -> BMSReservedWords.insert(cw.name, cw.action) }
+            ResourceWord.entries.forEach { rw -> BMSReservedWords.insert(rw.name, rw.action) }
+        }
+    }
+
     /**
      * ## Parse progress
      *
@@ -45,27 +55,29 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
             }
         }
 
-        val md5Digest = MessageDigest.getInstance("MD5")
-        val sha256Digest = MessageDigest.getInstance("SHA-256")
-        val data = Files.readAllBytes(info.path)
-        val duplexDigestInputStream = DigestInputStream(
-            DigestInputStream(
-                ByteArrayInputStream(data), md5Digest
-            ), sha256Digest
-        )
-
         val bmsLineParser = BMSLineParser()
 
-        // The BMS file format doesn't have a strong restriction about the lines' order, so we
-        //  couldn't do any optimization based on the envision like "out-of-order" around here.
-        // TODO: Can we speed up the file read progress?
-        BufferedReader(InputStreamReader(duplexDigestInputStream, "MS932")).use { br ->
-            var line = ""
-            while (br.readLine()?.also { line = it } != null) {
-                if (line.length < 2) {
-                    continue
+        val md5Digest = MessageDigest.getInstance("MD5")
+        val sha256Digest = MessageDigest.getInstance("SHA-256")
+
+
+        FileInputStream(info.path.toFile()).use { fis ->
+            val duplexDigestInputStream = DigestInputStream(
+                DigestInputStream(fis, md5Digest),
+                sha256Digest
+            )
+
+            // The BMS file format doesn't have a strong restriction about the lines' order, so we
+            //  couldn't do any optimization based on the envision like "out-of-order" around here.
+            // TODO: Can we speed up the file read progress?
+            BufferedReader(InputStreamReader(duplexDigestInputStream, "MS932")).use { br ->
+                var line = ""
+                while (br.readLine()?.also { line = it } != null) {
+                    if (line.length < 2) {
+                        continue
+                    }
+                    bmsLineParser.parse(ctx, line)
                 }
-                bmsLineParser.parse(ctx, line)
             }
         }
 
@@ -91,7 +103,6 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
 
         val md5 = convertHexString(md5Digest.digest())
         val sha256 = convertHexString(sha256Digest.digest())
-
 
         val usedRandoms = ctx.selectedRandoms ?: ctx.randomRecord
         val outputInfo = ChartInformation(info.path, ctx.lnType, usedRandoms)
@@ -171,7 +182,7 @@ class BMSParseContext(
      * - 2 => ("#00211:03030303", "#00211:01010101")
      * - 3 => ("#00311:03030303")
      */
-    private val channelMessages: MutableMap<Int, MutableList<String>> = mutableMapOf()
+    private val channelMessages: Array<MutableList<String>?> = arrayOfNulls(1000)
 
     /**
      * The maximum track value that has been registered
@@ -183,8 +194,10 @@ class BMSParseContext(
 
     fun registerChannelMessage(track: Int, line: String) {
         maxTrack = maxTrack.coerceAtLeast(track)
-        channelMessages.putIfAbsent(track, mutableListOf())
-        channelMessages[track]!!.add(line)
+        if (channelMessages[track] == null) {
+            channelMessages[track] = mutableListOf()
+        }
+        channelMessages[track]?.add(line)
     }
 }
 
@@ -222,7 +235,7 @@ private class CommandLineParser : LineParser {
     private val metadataLineParser = MetaDataLineParser()
 
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        if (controlCommandParser.parse(ctx, line)) {
+        if (line[1] !in '0'..'9' && controlCommandParser.parse(ctx, line)) {
             return true
         }
         if (ctx.shouldSkip()) {
@@ -231,10 +244,10 @@ private class CommandLineParser : LineParser {
         if (channelMessageCollector.parse(ctx, line)) {
             return true
         }
-        if (resourceLineParser.parse(ctx, line)) {
+        if (line[1] !in '0'..'9' && resourceLineParser.parse(ctx, line)) {
             return true
         }
-        if (metadataLineParser.parse(ctx, line)) {
+        if (line[1] !in '0'..'9' && metadataLineParser.parse(ctx, line)) {
             return true
         }
         logger.error { "Skipping command $line" }
@@ -244,33 +257,7 @@ private class CommandLineParser : LineParser {
 
 private class ControlCommandParser : LineParser {
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        line.matchReservedWord("RANDOM")?.let { r ->
-            val r = r.toIntOrNull()
-            if (r == null) {
-                logger.warn { "NaN argument passed to #RANDOM" }
-            } else {
-                ctx.pushNextRandom(r)
-            }
-            return true
-        }
-        line.matchReservedWord("ENDRANDOM")?.let {
-            ctx.popRandom()
-            return true
-        }
-        line.matchReservedWord("IF")?.let { r ->
-            val r = r.toIntOrNull()
-            if (r == null) {
-                logger.warn { "NaN argument passed to #IF" }
-            } else {
-                ctx.pushSkipFlag(r)
-            }
-            return true
-        }
-        line.matchReservedWord("ENDIF")?.let {
-            ctx.popSkipFlag()
-            return true
-        }
-        return false
+        return BMSParser.BMSReservedWords.executeIfMatched(line, ctx)
     }
 }
 
@@ -298,112 +285,54 @@ private class ChannelMessageCollector : LineParser {
 
 private class ResourceLineParser : LineParser {
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        line.matchReservedWord("BPM")?.let {
-            if (line[4] == ' ') {
-                val bpm = line.substring(5).trim().toDoubleOrNull()
-                if (bpm == null) {
-                    logger.warn { "NaN argument passed to #BPM" }
-                } else {
-                    if (bpm > 0) {
-                        ctx.bpm = bpm
-                    } else {
-                        logger.warn { "Negative BPM" }
-                    }
-                }
-            } else {
-                val bpm = line.substring(7).trim().toDoubleOrNull()
-                if (bpm == null) {
-                    logger.warn { "NaN argument passed to #BPM" }
-                } else {
-                    if (bpm > 0) {
-                        ctx.pushBPM(line[4], line[5], bpm)
-                    } else {
-                        logger.warn { "Negative BPM" }
-                    }
-                }
-            }
-            return true
-        }
-        line.matchReservedWord("WAV")?.let {
-            if (line.length >= 8) {
-                val fileName = line.substring(7).trim().replace('\\', '/')
-                ctx.registerWAV(line[4], line[5], fileName)
-            } else {
-                logger.warn { "Corrupted #WAV command" }
-            }
-            return true
-        }
-        line.matchReservedWord("BMP")?.let {
-            if (line.length >= 8) {
-                val fileName = line.substring(7).trim().replace('\\', '/')
-                ctx.registerBMP(line[4], line[5], fileName)
-            } else {
-                logger.warn { "Corrupted #BMP command" }
-            }
-            return true
-        }
-        line.matchReservedWord("STOP")?.let {
-            if (line.length >= 9) {
-                val stop = (line.substring(8).trim().toDouble() / 192).let {
-                    if (it < 0) {
-                        logger.warn { "Negative #STOP" }
-                        abs(it)
-                    } else {
-                        it
-                    }
-                }
-                ctx.registerStop(line[5], line[6], stop)
-            } else {
-                logger.warn { "Corrupted #STOP command" }
-            }
-            return true
-        }
-        line.matchReservedWord("SCROLL")?.let {
-            if (line.length >= 11) {
-                val scroll = line.substring(10).trim().toDouble()
-                ctx.registerScroll(line[7], line[8], scroll)
-            } else {
-                logger.warn { "Corrupted #SCROLL" }
-            }
-            return true
-        }
-
-        return false
+        return BMSParser.BMSReservedWords.executeIfMatched(line, ctx)
     }
 }
 
-/**
- * TODO: Do we have a chance to speed up this process?
- */
 private class MetaDataLineParser : LineParser {
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        for (cw in CommandWord.entries) {
-            if (line.length > cw.name.length + 2) {
-                line.matchReservedWord(cw.name)?.let { arg ->
-                    cw.action(ctx, arg)
-                    break
-                }
-            }
-        }
-        return true
+        return BMSParser.BMSReservedWords.executeIfMatched(line, ctx)
     }
 }
 
-private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -> Unit) {
-    PLAYER({ ctx: BMSParseContext, arg: String ->
+enum class ControlWord(val action: ReservedWord.Action<BMSParseContext>) {
+    RANDOM(ReservedWord.ParamedAction { ctx, arg ->
+        val r = arg.toIntOrNull()
+        if (r == null) {
+            logger.warn { "NaN argument passed to #RANDOM" }
+        } else {
+            ctx.pushNextRandom(r)
+        }
+    }),
+    ENDRANDOM(ReservedWord.ParamedAction { ctx, _ -> ctx.popRandom() }),
+    IF(ReservedWord.ParamedAction { ctx, arg ->
+        val r = arg.toIntOrNull()
+        if (r == null) {
+            logger.warn { "NaN argument passed to #IF" }
+        } else {
+            ctx.pushSkipFlag(r)
+        }
+    }),
+    ENDIF(ReservedWord.ParamedAction { ctx, _ ->
+        ctx.popSkipFlag()
+    })
+}
+
+enum class CommandWord(val action: ReservedWord.Action<BMSParseContext>) {
+    PLAYER(ReservedWord.ParamedAction { ctx, arg ->
         when (val player = arg.toIntOrNull()) {
             null -> logger.warn { "NaN passed as argument to #PLAYER" }
             in 1..<3 -> ctx.player = player
             else -> logger.warn { "Unexpected value passed to #PLAYER" }
         }
     }),
-    GENRE({ ctx: BMSParseContext, arg: String -> ctx.genre = arg }),
-    TITLE({ ctx: BMSParseContext, arg: String -> ctx.title = arg }),
-    SUBTITLE({ ctx: BMSParseContext, arg: String -> ctx.subTitle = arg }),
-    ARTIST({ ctx: BMSParseContext, arg: String -> ctx.artist = arg }),
-    SUBARTIST({ ctx: BMSParseContext, arg: String -> ctx.subArtist = arg }),
-    PLAYLEVEL({ ctx: BMSParseContext, arg: String -> ctx.playLevel = arg }),
-    Rank({ ctx: BMSParseContext, arg: String ->
+    GENRE(ReservedWord.ParamedAction { ctx, arg -> ctx.genre = arg }),
+    TITLE(ReservedWord.ParamedAction { ctx, arg -> ctx.title = arg }),
+    SUBTITLE(ReservedWord.ParamedAction { ctx, arg -> ctx.subTitle = arg }),
+    ARTIST(ReservedWord.ParamedAction { ctx, arg -> ctx.artist = arg }),
+    SUBARTIST(ReservedWord.ParamedAction { ctx, arg -> ctx.subArtist = arg }),
+    PLAYLEVEL(ReservedWord.ParamedAction { ctx, arg -> ctx.playLevel = arg }),
+    RANK(ReservedWord.ParamedAction { ctx, arg ->
         when (val rank = arg.toIntOrNull()) {
             null -> logger.warn { "NaN passed as argument to #Rank" }
             in 0..<5 -> {
@@ -412,10 +341,9 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             }
 
             else -> logger.warn { "Unexpected value passed to #Rank" }
-
         }
     }),
-    DEFEXRANK({ ctx: BMSParseContext, arg: String ->
+    DEFEXRANK(ReservedWord.ParamedAction { ctx, arg ->
         when (val rank = arg.toIntOrNull()) {
             null -> logger.warn { "NaN passed as argument to #DEFEXRANK" }
             in 0..Int.MAX_VALUE -> {
@@ -426,7 +354,7 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             else -> logger.warn { "Unexpected value passed to #DEFEXRANK" }
         }
     }),
-    TOTAL({ ctx: BMSParseContext, arg: String ->
+    TOTAL(ReservedWord.ParamedAction { ctx, arg ->
         val total = arg.toDoubleOrNull()
         if (total == null) {
             logger.warn { "NaN passed as argument to #TOTAL" }
@@ -437,22 +365,22 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             logger.warn { "Unexpected value passed to #TOTAL" }
         }
     }),
-    VOLWAV({ ctx: BMSParseContext, arg: String ->
+    VOLWAV(ReservedWord.ParamedAction { ctx, arg ->
         when (val volWAV = arg.toIntOrNull()) {
             null -> logger.warn { "NaN passed as argument to #VOLWAV" }
             else -> ctx.volWAV = volWAV
         }
     }),
-    STAGEFILE({ ctx: BMSParseContext, arg: String ->
+    STAGEFILE(ReservedWord.ParamedAction { ctx, arg ->
         ctx.stageFile = arg.replace('\\', '/')
     }),
-    BACKBMP({ ctx: BMSParseContext, arg: String ->
+    BACKBMP(ReservedWord.ParamedAction { ctx, arg ->
         ctx.backBMP = arg.replace('\\', '/')
     }),
-    PREVIEW({ ctx: BMSParseContext, arg: String ->
+    PREVIEW(ReservedWord.ParamedAction { ctx, arg ->
         ctx.preview = arg.replace('\\', '/')
     }),
-    LNOBJ({ ctx: BMSParseContext, arg: String ->
+    LNOBJ(ReservedWord.ParamedAction { ctx, arg ->
         if (ctx.base == 62) {
             val lnObj = parseInt62(arg[0], arg[1])
             if (lnObj == null) {
@@ -464,7 +392,7 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             ctx.lnObj = Integer.parseInt(arg, 36)
         }
     }),
-    LNMODE({ ctx: BMSParseContext, arg: String ->
+    LNMODE(ReservedWord.ParamedAction { ctx, arg ->
         val lnMode = arg.toIntOrNull()
         if (lnMode == null) {
             logger.warn { "NaN passed as argument to #LNMODE" }
@@ -476,7 +404,7 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             }
         }
     }),
-    DIFFICULTY({ ctx: BMSParseContext, arg: String ->
+    DIFFICULTY(ReservedWord.ParamedAction { ctx, arg ->
         val difficulty = arg.toIntOrNull()
         if (difficulty == null) {
             logger.warn { "NaN passed as argument to #DIFFICULTY" }
@@ -484,10 +412,10 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             ctx.difficulty = difficulty
         }
     }),
-    BANNER({ ctx: BMSParseContext, arg: String ->
+    BANNER(ReservedWord.ParamedAction { ctx, arg ->
         ctx.banner = arg.replace('\\', '/')
     }),
-    BASE({ ctx: BMSParseContext, arg: String ->
+    BASE(ReservedWord.ParamedAction { ctx, arg ->
         val base = arg.toIntOrNull()
         if (base == null) {
             logger.warn { "NaN passed as argument to #BASE" }
@@ -495,6 +423,73 @@ private enum class CommandWord(val action: (ctx: BMSParseContext, arg: String) -
             logger.warn { "Unexpected value passed to #BASE" }
         } else {
             ctx.base = base
+        }
+    });
+}
+
+enum class ResourceWord(val action: ReservedWord.Action<BMSParseContext>) {
+    BPM(ReservedWord.PlainAction { ctx, line ->
+        if (line[4] == ' ') {
+            val bpm = line.substring(5).trim().toDoubleOrNull()
+            if (bpm == null) {
+                logger.warn { "NaN argument passed to #BPM" }
+            } else {
+                if (bpm > 0) {
+                    ctx.bpm = bpm
+                } else {
+                    logger.warn { "Negative BPM" }
+                }
+            }
+        } else {
+            val bpm = line.substring(7).trim().toDoubleOrNull()
+            if (bpm == null) {
+                logger.warn { "NaN argument passed to #BPM" }
+            } else {
+                if (bpm > 0) {
+                    ctx.pushBPM(line[4], line[5], bpm)
+                } else {
+                    logger.warn { "Negative BPM" }
+                }
+            }
+        }
+    }),
+    WAV(ReservedWord.PlainAction { ctx, line ->
+        if (line.length >= 8) {
+            val fileName = line.substring(7).trim().replace('\\', '/')
+            ctx.registerWAV(line[4], line[5], fileName)
+        } else {
+            logger.warn { "Corrupted #WAV command" }
+        }
+    }),
+    BMP(ReservedWord.PlainAction { ctx, line ->
+        if (line.length >= 8) {
+            val fileName = line.substring(7).trim().replace('\\', '/')
+            ctx.registerBMP(line[4], line[5], fileName)
+        } else {
+            logger.warn { "Corrupted #BMP command" }
+        }
+    }),
+    STOP(ReservedWord.PlainAction { ctx, line ->
+        if (line.length >= 9) {
+            val stop = (line.substring(8).trim().toDouble() / 192).let {
+                if (it < 0) {
+                    logger.warn { "Negative #STOP" }
+                    abs(it)
+                } else {
+                    it
+                }
+            }
+            ctx.registerStop(line[5], line[6], stop)
+        } else {
+            logger.warn { "Corrupted #STOP command" }
+        }
+    }),
+    SCROLL(ReservedWord.PlainAction { ctx, line ->
+        if (line.length >= 11) {
+            val scroll = line.substring(10).trim().toDouble()
+            ctx.registerScroll(line[7], line[8], scroll)
+        } else {
+            logger.warn { "Corrupted #SCROLL" }
         }
     })
 }

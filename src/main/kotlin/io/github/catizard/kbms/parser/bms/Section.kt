@@ -126,12 +126,12 @@ class Section {
                     // TODO: Ask god what this logic is
                     var baseChannel = 0
                     var channelP2 = 0
-                    ChannelDef.NOTE_CHANNELS.forEach { noteChannel ->
+                    for (noteChannel in ChannelDef.NOTE_CHANNELS) {
                         if (channel in noteChannel..noteChannel + 8) {
                             baseChannel = noteChannel
                             channelP2 = channel - noteChannel
                             channelLines.add(channelMessage)
-                            return@forEach
+                            break
                         }
                     }
                     // 5/10 Keys => 7/14 Keys
@@ -232,7 +232,7 @@ class Section {
                 when (val channelDef = ChannelDef.valueOf(paramChannel)) {
                     ChannelDef.LANE_AUTOPLAY -> {
                         parseLine(ctx.base, channelMessage) { pos, data ->
-                            getTimeline( sectionNum + rate * pos).addBackgroundNote(NormalNote(ctx.getWavID(data)))
+                            getTimeline(sectionNum + rate * pos).addBackgroundNote(NormalNote(ctx.getWavID(data)))
                         }
                     }
 
@@ -460,9 +460,8 @@ class Section {
     }
 
     private fun getTimeline(sectionNum: Double): Timeline {
-        val tlc = timelineCache[sectionNum]
-        if (tlc != null) {
-            return tlc.timeline
+        if (timelineCache.containsKey(sectionNum)) {
+            return timelineCache[sectionNum]!!.timeline
         }
 
         val le: Map.Entry<Double, TimelineCache> = timelineCache.lowerEntry(sectionNum)
@@ -659,9 +658,73 @@ private data class ChannelLane(
          * - Otherwise, it's a playable 'note'
          */
         fun create(mode: Mode, channel: Int): ChannelLane? {
-            val (isP2Side, offset, type) = within(channel) ?: return null
-            val key = if (isP2Side) getP2SideLane(mode, offset) else getP1SideLane(mode, offset)
-            return ChannelLane(channel, key, type)
+            return when (channel) {
+                in ChannelDef.P1_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP1SideLane(
+                        mode, channel - ChannelDef.P1_KEY_BASE.value,
+                    ),
+                    NoteType.Normal
+                )
+
+                in ChannelDef.P2_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP2SideLane(
+                        mode, channel - ChannelDef.P2_KEY_BASE.value
+                    ),
+                    NoteType.Normal
+                )
+
+                in ChannelDef.P1_LONG_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP1SideLane(
+                        mode, channel - ChannelDef.P1_LONG_KEY_BASE.value
+                    ),
+                    NoteType.Long
+                )
+
+                in ChannelDef.P2_LONG_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP2SideLane(
+                        mode, channel - ChannelDef.P2_LONG_KEY_BASE.value
+                    ),
+                    NoteType.Long
+                )
+
+                in ChannelDef.P1_INVISIBLE_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP1SideLane(
+                        mode, channel - ChannelDef.P1_INVISIBLE_KEY_BASE.value
+                    ),
+                    NoteType.Invisible
+                )
+
+                in ChannelDef.P2_INVISIBLE_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP2SideLane(
+                        mode, channel - ChannelDef.P2_INVISIBLE_KEY_BASE.value
+                    ),
+                    NoteType.Invisible
+                )
+
+                in ChannelDef.P1_MINE_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP1SideLane(
+                        mode, channel - ChannelDef.P1_MINE_KEY_BASE.value
+                    ),
+                    NoteType.Mine
+                )
+
+                in ChannelDef.P2_MINE_KEY_RANGE -> ChannelLane(
+                    channel,
+                    getP2SideLane(
+                        mode, channel - ChannelDef.P2_MINE_KEY_BASE.value
+                    ),
+                    NoteType.Mine
+                )
+
+                else -> null
+            }
         }
     }
 }
