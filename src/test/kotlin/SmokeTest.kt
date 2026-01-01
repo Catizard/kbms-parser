@@ -32,12 +32,22 @@ class SmokeTest {
     }
 
     @Test
-    fun clapTest() {
+    fun clapTestFile() {
+        val testFile = System.getenv("KBMS.TestFile") ?: return
+        val upstream = BMSDecoder()
+        val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
+        val expectedModel = upstream.decode(Paths.get(testFile))
+        val realModel = real.parse(Paths.get(testFile))
+        check(realModel, expectedModel)
+    }
+
+    @Test
+    fun clapTestDirectory() {
         val testDirectory = System.getenv("KBMS.TestDirectory") ?: return
         val files = fetchAllBMSFiles(File(testDirectory))
         val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val upstream = BMSDecoder()
-        files?.forEachIndexed { i, file ->
+        files.forEachIndexed { i, file ->
             logger.info { "Running ${i}th clap test, file at ${file.path}" }
             val (realModel, realCost) = {
                 val stun = stun()

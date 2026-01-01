@@ -21,9 +21,9 @@ class Section {
     val rate: Double
     val sectionNum: Double
     val channelLines: MutableList<String> = mutableListOf()
-    val bpmChange: MutableMap<Double, Double> = mutableMapOf()
-    val stop: MutableMap<Double, Double> = mutableMapOf()
-    val scroll: MutableMap<Double, Double> = mutableMapOf()
+    val bpmChange: TreeMap<Double, Double> = TreeMap()
+    val stop: TreeMap<Double, Double> = TreeMap()
+    val scroll: TreeMap<Double, Double> = TreeMap()
     val poor: List<Int>
     val ctx: BMSParseContext
     val timelineCache: TreeMap<Double, TimelineCache>
@@ -71,8 +71,10 @@ class Section {
                 ChannelDef.BPM_CHANGE -> {
                     parseLine(channelMessage) { pos, x1, x2 ->
                         val data = parseInt36(x1, x2) ?: return@parseLine
-                        // TODO: Ask god about this math
-                        bpmChange[pos] = (data / 36).toDouble() * 16 + (data % 36)
+                        if (data != 0) {
+                            // TODO: Ask god about this math
+                            bpmChange[pos] = (data / 36).toDouble() * 16 + (data % 36)
+                        }
                     }
                 }
 
@@ -196,11 +198,11 @@ class Section {
 
         // TODO: I couldn't understand...
         // BPM変化。ストップシーケンステーブル準備
-        val stops: MutableIterator<MutableMap.MutableEntry<Double, Double>> = stop.entries.iterator()
+        val stops = stop.entries.iterator()
         var ste = if (stops.hasNext()) stops.next() else null
-        val bpms: MutableIterator<MutableMap.MutableEntry<Double, Double>> = bpmChange.entries.iterator()
+        val bpms = bpmChange.entries.iterator()
         var bce = if (bpms.hasNext()) bpms.next() else null
-        val scrolls: MutableIterator<MutableMap.MutableEntry<Double, Double>> = scroll.entries.iterator()
+        val scrolls = scroll.entries.iterator()
         var sce = if (scrolls.hasNext()) scrolls.next() else null
 
         while (ste != null || bce != null || sce != null) {
