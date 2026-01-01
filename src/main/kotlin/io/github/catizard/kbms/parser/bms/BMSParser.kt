@@ -51,7 +51,7 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
         val ctx = BMSParseContext(selectedRandoms = info.selectedRandoms).apply {
             val isPMS = info.path.toFile().toString().endsWith(".pms")
             if (isPMS) {
-                playMode = Mode.POPN_5K
+                playMode = Mode.POPN_9K
             }
         }
 
