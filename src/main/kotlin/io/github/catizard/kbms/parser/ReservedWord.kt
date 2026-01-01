@@ -1,12 +1,19 @@
 package io.github.catizard.kbms.parser
 
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
+
 /**
  * [ReservedWord] is a helper class for matching the reserved words in a string
  *
  * TODO: Due to the design issue, we cannot have a pair of reserved word that one is the prefix
  *  of the another one (e.g. foo and foobar, foo is the prefix of foobar)
  */
-class ReservedWord<T: ParseContext> {
+class ReservedWord<T : ParseContext> {
+    companion object {
+        val logger = KotlinLogging.logger {}
+    }
+
     private val trie: Array<Array<Int>> = Array(256) { Array(26) { 0 } }
     private val actions: MutableMap<Int, Action<T>> = mutableMapOf()
     private var cn = 0
@@ -43,7 +50,14 @@ class ReservedWord<T: ParseContext> {
             root = trie[root][x]
             actions[root]?.let { action ->
                 when (action) {
-                    is ParamedAction -> action.execute(ctx, s.substring(i + 2))
+                    is ParamedAction -> {
+                        if (i + 2 >= s.length) {
+                            logger.error { "line $s matched the word but it doesn't have enough length to split parameter" }
+                        } else {
+                            action.execute(ctx, s.substring(i + 2).trim())
+                        }
+                    }
+
                     is PlainAction -> action.execute(ctx, s)
                 }
                 return true

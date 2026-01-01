@@ -400,7 +400,7 @@ enum class CommandWord(val action: ReservedWord.Action<BMSParseContext>) {
             if (lnMode !in 0..3) {
                 logger.warn { "Unexpected value passed to #LNMODE" }
             } else {
-                ctx.lnMode = LongNoteDef.Companion.fromLNMode(lnMode)!!
+                LongNoteDef.fromLNMode(lnMode)?.let { ctx.lnMode = it }
             }
         }
     }),

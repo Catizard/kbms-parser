@@ -240,9 +240,9 @@ enum class LongNoteDef {
     companion object {
         fun fromLNMode(value: Int): LongNoteDef? {
             return when(value) {
-                0 -> LONG_NOTE
-                1 -> CHARGE_NOTE
-                2 -> HELL_CHARGE_NOTE
+                1 -> LONG_NOTE
+                2 -> CHARGE_NOTE
+                3 -> HELL_CHARGE_NOTE
                 else -> null
             }
         }

@@ -395,7 +395,9 @@ class Section {
 
                         if (!insideLN) {
                             val data = parseInt36(x1, x2) ?: return@parseLine
-                            tl.setNote(key, MineNote(ctx.getWavID(0), data.toDouble()))
+                            if (data != 0) {
+                                tl.setNote(key, MineNote(ctx.getWavID(0), data.toDouble()))
+                            }
                         } else {
                             logger.warn { "Conflict happens when trying to add mine note: ${key + 1}, time(ms): ${tl.milliTime}" }
                         }
@@ -536,6 +538,7 @@ enum class ChannelDef(val value: Int) {
                 P2_LONG_KEY_BASE.value -> P2_KEY_BASE
                 P1_MINE_KEY_BASE.value -> P1_KEY_BASE
                 P2_MINE_KEY_BASE.value -> P2_KEY_BASE
+                SCROLL.value -> SCROLL
                 else -> null
             }
         }
