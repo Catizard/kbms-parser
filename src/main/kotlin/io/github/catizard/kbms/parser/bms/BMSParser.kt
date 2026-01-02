@@ -304,7 +304,7 @@ enum class ControlWord(val action: ReservedWord.Action<BMSParseContext>) {
             ctx.pushNextRandom(r)
         }
     }),
-    ENDRANDOM(ReservedWord.ParamedAction { ctx, _ -> ctx.popRandom() }),
+    ENDRANDOM(ReservedWord.PlainAction { ctx, _ -> ctx.popRandom() }),
     IF(ReservedWord.ParamedAction { ctx, arg ->
         val r = arg.toIntOrNull()
         if (r == null) {
@@ -313,7 +313,7 @@ enum class ControlWord(val action: ReservedWord.Action<BMSParseContext>) {
             ctx.pushSkipFlag(r)
         }
     }),
-    ENDIF(ReservedWord.ParamedAction { ctx, _ ->
+    ENDIF(ReservedWord.PlainAction { ctx, _ ->
         ctx.popSkipFlag()
     })
 }
