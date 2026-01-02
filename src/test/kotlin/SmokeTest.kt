@@ -44,7 +44,8 @@ class SmokeTest {
     @Test
     fun clapTestDirectory() {
         val testDirectory = System.getenv("KBMS.TestDirectory") ?: return
-        val files = fetchAllBMSFiles(File(testDirectory))
+        val maxTestCount = System.getenv("KBMS.MaxTestCount")?.toIntOrNull() ?: 10000
+        val files = fetchAllBMSFiles(File(testDirectory), maxTestCount)
         val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val upstream = BMSDecoder()
         files.forEachIndexed { i, file ->
@@ -66,7 +67,7 @@ class SmokeTest {
         }
     }
 
-    private fun fetchAllBMSFiles(directory: File): List<File> {
+    private fun fetchAllBMSFiles(directory: File, maxTestCount: Int): List<File> {
         val bmsFiles = mutableListOf<File>()
 
         if (!directory.exists() || !directory.isDirectory) {
@@ -77,8 +78,14 @@ class SmokeTest {
 
         fun walkDir(currentDir: File) {
             val files = currentDir.listFiles() ?: return
+            if (bmsFiles.size >= maxTestCount) {
+                return
+            }
 
             for (file in files) {
+                if (bmsFiles.size >= maxTestCount) {
+                    break
+                }
                 if (file.isDirectory) {
                     walkDir(file)
                 } else if (file.isFile) {

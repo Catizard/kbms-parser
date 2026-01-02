@@ -125,7 +125,8 @@ class Section {
                 }
 
                 else -> {
-                    // TODO: Ask god what this logic is
+                    // NOTE: Some chart has 2p side notes definition, but doesn't set #PLAYER correctly. In this case,
+                    //  we need to manually convert the play mode and key lane count
                     var baseChannel = 0
                     var channelP2 = 0
                     for (noteChannel in ChannelDef.NOTE_CHANNELS) {
@@ -325,7 +326,7 @@ class Section {
                     parseLine(ctx.base, channelMessage) { pos, data ->
                         val tl = getTimeline(sectionNum + rate * pos)
                         val insideLN =
-                            lnList[key]?.any { longNote -> longNote.section in tl.section..longNote.pair!!.section }
+                            lnList[key]?.any { longNote -> tl.section in longNote.section..longNote.pair!!.section }
                                 ?: false
                         if (insideLN) {
                             return@parseLine logger.warn { "LN's start note is inside another long node period" }
@@ -389,12 +390,14 @@ class Section {
 
                 NoteType.Mine -> {
                     parseLine(channelMessage) { pos, x1, x2 ->
+                        val data = parseInt36(x1, x2) ?: return@parseLine
+                        if (data == 0) return@parseLine
+
                         val tl = getTimeline(sectionNum + rate * pos)
                         val insideLN = tl.existNote(key)
-                                || lnList[key]?.any { longNote -> longNote.section in tl.section..longNote.pair!!.section } ?: false
+                                || lnList[key]?.any { longNote -> tl.section in longNote.section..longNote.pair!!.section } ?: false
 
                         if (!insideLN) {
-                            val data = parseInt36(x1, x2) ?: return@parseLine
                             if (data != 0) {
                                 tl.setNote(key, MineNote(ctx.getWavID(0), data.toDouble()))
                             }
@@ -497,7 +500,7 @@ enum class ChannelDef(val value: Int) {
     P1_LONG_KEY_BASE(5 * 36 + 1),
     P2_LONG_KEY_BASE(6 * 36 + 1),
     P1_MINE_KEY_BASE(13 * 36 + 1),
-    P2_MINE_KEY_BASE(13 * 36 + 1);
+    P2_MINE_KEY_BASE(14 * 36 + 1);
 
     companion object {
         val NOTE_CHANNELS = arrayOf<Int>(
@@ -517,7 +520,7 @@ enum class ChannelDef(val value: Int) {
         val P2_INVISIBLE_KEY_RANGE = IntRange(P2_INVISIBLE_KEY_BASE.value, P2_INVISIBLE_KEY_BASE.value + 8)
         val P1_LONG_KEY_RANGE = IntRange(P1_LONG_KEY_BASE.value, P1_LONG_KEY_BASE.value + 8)
         val P2_LONG_KEY_RANGE = IntRange(P2_LONG_KEY_BASE.value, P2_LONG_KEY_BASE.value + 8)
-        val P1_MINE_KEY_RANGE = IntRange(P1_MINE_KEY_BASE.value, P1_KEY_BASE.value + 8)
+        val P1_MINE_KEY_RANGE = IntRange(P1_MINE_KEY_BASE.value, P1_MINE_KEY_BASE.value + 8)
         val P2_MINE_KEY_RANGE = IntRange(P2_MINE_KEY_BASE.value, P2_MINE_KEY_BASE.value + 8)
 
         fun valueOf(value: Int): ChannelDef? {
@@ -532,12 +535,12 @@ enum class ChannelDef(val value: Int) {
                 STOP.value -> STOP
                 P1_KEY_BASE.value -> P1_KEY_BASE
                 P2_KEY_BASE.value -> P2_KEY_BASE
-                P1_INVISIBLE_KEY_BASE.value -> P1_KEY_BASE
-                P2_INVISIBLE_KEY_BASE.value -> P2_KEY_BASE
-                P1_LONG_KEY_BASE.value -> P1_KEY_BASE
-                P2_LONG_KEY_BASE.value -> P2_KEY_BASE
-                P1_MINE_KEY_BASE.value -> P1_KEY_BASE
-                P2_MINE_KEY_BASE.value -> P2_KEY_BASE
+                P1_INVISIBLE_KEY_BASE.value -> P1_INVISIBLE_KEY_BASE
+                P2_INVISIBLE_KEY_BASE.value -> P2_INVISIBLE_KEY_BASE
+                P1_LONG_KEY_BASE.value -> P1_LONG_KEY_BASE
+                P2_LONG_KEY_BASE.value -> P2_LONG_KEY_BASE
+                P1_MINE_KEY_BASE.value -> P1_MINE_KEY_BASE
+                P2_MINE_KEY_BASE.value -> P2_MINE_KEY_BASE
                 SCROLL.value -> SCROLL
                 else -> null
             }
