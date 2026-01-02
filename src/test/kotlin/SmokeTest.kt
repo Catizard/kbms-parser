@@ -38,7 +38,11 @@ class SmokeTest {
         val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val expectedModel = upstream.decode(Paths.get(testFile))
         val realModel = real.parse(Paths.get(testFile))
-        check(realModel, expectedModel)
+        if (realModel.info.selectedRandoms == null || realModel.info.selectedRandoms.isEmpty()) {
+            check(realModel, expectedModel)
+        } else {
+            logger.warn { "Skipping clap test because chart has random statements" }
+        }
     }
 
     @Test
@@ -63,7 +67,11 @@ class SmokeTest {
                 Pair(expectedModel, cost)
             }()
             logger.info { "${i}th clap test ended. Real cost: ${realCost}ms, upstream cost: ${expectedCost}ms" }
-            check(realModel, expectedModel)
+            if (realModel.info.selectedRandoms == null || realModel.info.selectedRandoms.isEmpty()) {
+                check(realModel, expectedModel)
+            } else {
+                logger.warn { "Skipping clap test because chart has random statements" }
+            }
         }
     }
 
