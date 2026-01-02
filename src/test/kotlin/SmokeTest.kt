@@ -12,6 +12,7 @@ import java.io.File
 import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import io.github.catizard.jbms.parser.BMSModel as UpstreamBMSModel
 import io.github.catizard.jbms.parser.LongNote as UpstreamLongNote
@@ -158,6 +159,8 @@ class SmokeTest {
                 if (realNote == null) {
                     assertNull(expectedNote)
                     return@forEachIndexed
+                } else {
+                    assertNotNull(expectedNote)
                 }
                 checkNote(realNote, expectedNote)
             }

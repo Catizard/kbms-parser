@@ -299,6 +299,7 @@ class Section {
                                         if (lnList[key] == null) {
                                             lnList[key] = mutableListOf()
                                         }
+                                        lnList[key]!!.add(note)
                                         startLN[key] = null
                                         break
                                     } else {
@@ -329,6 +330,18 @@ class Section {
                             lnList[key]?.any { longNote -> tl.section in longNote.section..longNote.pair!!.section }
                                 ?: false
                         if (insideLN) {
+                            if (startLN[key] == null) {
+                                val ln = LongNote(ctx.getWavID(data))
+                                ln.section = Double.MIN_VALUE
+                                startLN[key] = ln
+                                logger.warn { "LN内にLN開始ノートを定義しようとしています : ${key + 1}, section: ${tl.section}, time(ms): ${tl.microTime}"  }
+                            } else {
+                                if (startLN[key]!!.section != Double.MIN_VALUE) {
+                                    timelineCache.get(startLN[key]!!.section)!!.timeline.setNote(key, null)
+                                }
+                                startLN[key] = null
+                                logger.warn { "LN内にLN終端ノートを定義しようとしています : ${key + 1}, section: ${tl.section}, time(ms): ${tl.microTime}" }
+                            }
                             return@parseLine logger.warn { "LN's start note is inside another long node period" }
                         }
 
