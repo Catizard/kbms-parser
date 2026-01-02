@@ -43,7 +43,11 @@ class ReservedWord<T : ParseContext> {
             if (c == '#') {
                 return@forEachIndexed
             }
-            val x = c.lowercaseChar() - 'a'
+            val c = c.lowercaseChar()
+            if (c !in 'a'..'z') {
+                return false
+            }
+            val x = c - 'a'
             if (trie[root][x] == 0) {
                 return false
             }
