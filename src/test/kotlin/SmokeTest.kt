@@ -38,12 +38,8 @@ class SmokeTest {
         val upstream = BMSDecoder()
         val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val expectedModel = upstream.decode(Paths.get(testFile))
-        val realModel = real.parse(Paths.get(testFile))
-        if (realModel.info.selectedRandoms == null || realModel.info.selectedRandoms.isEmpty()) {
-            check(realModel, expectedModel)
-        } else {
-            logger.warn { "Skipping clap test because chart has random statements" }
-        }
+        val realModel = real.parse(Paths.get(testFile), expectedModel.chartInformation.selectedRandoms?.toList())
+        check(realModel, expectedModel)
     }
 
     @Test
@@ -55,24 +51,20 @@ class SmokeTest {
         val upstream = BMSDecoder()
         files.forEachIndexed { i, file ->
             logger.info { "Running ${i}th clap test, file at ${file.path}" }
-            val (realModel, realCost) = {
-                val stun = stun()
-                val realModel = real.parse(file)
-                val cost = stun()
-                Pair(realModel, cost)
-            }()
             val (expectedModel, expectedCost) = {
                 val stun = stun()
                 val expectedModel = upstream.decode(file)
                 val cost = stun()
                 Pair(expectedModel, cost)
             }()
+            val (realModel, realCost) = {
+                val stun = stun()
+                val realModel = real.parse(file.toPath(), expectedModel.chartInformation.selectedRandoms?.toList())
+                val cost = stun()
+                Pair(realModel, cost)
+            }()
             logger.info { "${i}th clap test ended. Real cost: ${realCost}ms, upstream cost: ${expectedCost}ms" }
-            if (realModel.info.selectedRandoms == null || realModel.info.selectedRandoms.isEmpty()) {
-                check(realModel, expectedModel)
-            } else {
-                logger.warn { "Skipping clap test because chart has random statements" }
-            }
+            check(realModel, expectedModel)
         }
     }
 

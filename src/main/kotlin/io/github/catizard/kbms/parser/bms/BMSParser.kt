@@ -8,7 +8,6 @@ import bms.model.Mode
 import bms.model.Timeline
 import bms.model.TotalType
 import io.github.catizard.kbms.parser.convertHexString
-import io.github.catizard.kbms.parser.matchReservedWord
 import bms.model.note.LongNote
 import io.github.catizard.kbms.parser.parseInt62
 import io.github.catizard.kbms.parser.ChartParser
@@ -28,12 +27,13 @@ val logger = KotlinLogging.logger {}
 
 class BMSParser(config: ChartParserConfig) : ChartParser(config) {
     companion object {
-        val BMSReservedWords = ReservedWord<BMSParseContext>()
+        val BMSHeaderWords = ReservedWord<BMSParseContext>()
+        val BMSControlWords = ReservedWord<BMSParseContext>()
 
         init {
-            CommandWord.entries.forEach { cw -> BMSReservedWords.insert(cw.name, cw.action) }
-            ControlWord.entries.forEach { cw -> BMSReservedWords.insert(cw.name, cw.action) }
-            ResourceWord.entries.forEach { rw -> BMSReservedWords.insert(rw.name, rw.action) }
+            ControlWord.entries.forEach { cw -> BMSControlWords.insert(cw.name, cw.action) }
+            CommandWord.entries.forEach { cw -> BMSHeaderWords.insert(cw.name, cw.action) }
+            ResourceWord.entries.forEach { rw -> BMSHeaderWords.insert(rw.name, rw.action) }
         }
     }
 
@@ -231,8 +231,7 @@ private class ExtraValueLineParser : LineParser {
 private class CommandLineParser : LineParser {
     private val controlCommandParser = ControlCommandParser()
     private val channelMessageCollector = ChannelMessageCollector()
-    private val resourceLineParser = ResourceLineParser()
-    private val metadataLineParser = MetaDataLineParser()
+    private val headerLineParser = HeaderLineParser()
 
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
         if (line[1] !in '0'..'9' && controlCommandParser.parse(ctx, line)) {
@@ -244,10 +243,7 @@ private class CommandLineParser : LineParser {
         if (channelMessageCollector.parse(ctx, line)) {
             return true
         }
-        if (line[1] !in '0'..'9' && resourceLineParser.parse(ctx, line)) {
-            return true
-        }
-        if (line[1] !in '0'..'9' && metadataLineParser.parse(ctx, line)) {
+        if (line[1] !in '0'..'9' && headerLineParser.parse(ctx, line)) {
             return true
         }
         logger.error { "Skipping command $line" }
@@ -257,7 +253,7 @@ private class CommandLineParser : LineParser {
 
 private class ControlCommandParser : LineParser {
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        return BMSParser.BMSReservedWords.executeIfMatched(line, ctx)
+        return BMSParser.BMSControlWords.executeIfMatched(line, ctx)
     }
 }
 
@@ -283,15 +279,9 @@ private class ChannelMessageCollector : LineParser {
     }
 }
 
-private class ResourceLineParser : LineParser {
+private class HeaderLineParser : LineParser {
     override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        return BMSParser.BMSReservedWords.executeIfMatched(line, ctx)
-    }
-}
-
-private class MetaDataLineParser : LineParser {
-    override fun parse(ctx: BMSParseContext, line: String): Boolean {
-        return BMSParser.BMSReservedWords.executeIfMatched(line, ctx)
+        return BMSParser.BMSHeaderWords.executeIfMatched(line, ctx)
     }
 }
 

@@ -35,14 +35,14 @@ abstract class ChartParser(val config: ChartParserConfig) {
         return parse(file.toPath())
     }
 
-    fun parse(path: Path): BMSModel {
+    fun parse(path: Path, selectedRandoms: List<Int>? = null): BMSModel {
         // Enforce LN mode if the parser sets to follow LR2 behavior
         val lnType = if (config.usingLR2Mode) {
             LongNoteDef.LONG_NOTE
         } else {
             config.lnType
         }
-        return parse(ChartInformation(path = path, lnType = lnType))
+        return parse(ChartInformation(path = path, lnType = lnType, selectedRandoms = selectedRandoms))
     }
 
     abstract fun parse(info: ChartInformation): BMSModel
