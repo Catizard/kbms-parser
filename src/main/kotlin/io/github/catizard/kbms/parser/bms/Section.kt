@@ -185,7 +185,7 @@ class Section {
                     if (ctx.getBgaID(poor[i]) != -2) {
                         LayerSequence(i * POOR_TIME / poor.size, ctx.getBgaID(poor[i]))
                     } else {
-                        LayerSequence(i * POOR_TIME, -1)
+                        LayerSequence(i * POOR_TIME / poor.size, -1)
                     }
                 }
             }
@@ -398,9 +398,7 @@ class Section {
                                 || lnList[key]?.any { longNote -> tl.section in longNote.section..longNote.pair!!.section } ?: false
 
                         if (!insideLN) {
-                            if (data != 0) {
-                                tl.setNote(key, MineNote(ctx.getWavID(0), data.toDouble()))
-                            }
+                            tl.setNote(key, MineNote(ctx.getWavID(0), data.toDouble()))
                         } else {
                             logger.warn { "Conflict happens when trying to add mine note: ${key + 1}, time(ms): ${tl.milliTime}" }
                         }
