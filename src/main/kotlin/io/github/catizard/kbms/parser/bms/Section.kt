@@ -63,7 +63,8 @@ class Section {
             when (ChannelDef.valueOf(channel)) {
                 ChannelDef.LANE_AUTOPLAY, ChannelDef.BGA_PLAY, ChannelDef.LAYER_PLAY -> channelLines.add(channelMessage)
                 ChannelDef.SECTION_RATE -> {
-                    channelMessage.split(":")[1].toDoubleOrNull()?.let {
+                    val split = channelMessage.split(":")
+                    split.getOrNull(1)?.toDoubleOrNull()?.let {
                         rate = it
                     } ?: logger.warn { "NaN passed as rate of the section" }
                 }
