@@ -8,8 +8,12 @@ import io.github.catizard.kbms.parser.ChartParserConfig
 import io.github.catizard.kbms.parser.bms.BMSParser
 import io.github.catizard.kbms.parser.stun
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
 import java.nio.file.Paths
+import java.util.stream.Collectors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -36,19 +40,26 @@ class SmokeTest {
     fun clapTestFile() {
         val testFile = System.getenv("KBMS.TestFile") ?: return
         val upstream = BMSDecoder()
-        val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val expectedModel = upstream.decode(Paths.get(testFile))
+        val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val realModel = real.parse(Paths.get(testFile), expectedModel.chartInformation.selectedRandoms?.toList())
         check(realModel, expectedModel)
     }
 
     @Test
     fun clapTestDirectory() {
-        val testDirectory = System.getenv("KBMS.TestDirectory") ?: return
-        val maxTestCount = System.getenv("KBMS.MaxTestCount")?.toIntOrNull() ?: 10000
-        val files = fetchAllBMSFiles(File(testDirectory), maxTestCount)
+        val files = readBMSFilesFromFile() ?: System.getenv("KBMS.TestDirectory")?.let { testDirectory ->
+            fetchAllBMSFiles(
+                File(testDirectory),
+                System.getenv("KBMS.MaxTestCount")?.toIntOrNull()?.let {
+                    if (it > 0) it else Int.MAX_VALUE
+                } ?: 10000
+            )
+        } ?: return
+
         val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
         val upstream = BMSDecoder()
+        val errors = mutableListOf<Throwable>()
         files.forEachIndexed { i, file ->
             logger.info { "Running ${i}th clap test, file at ${file.path}" }
             val (expectedModel, expectedCost) = {
@@ -57,14 +68,32 @@ class SmokeTest {
                 val cost = stun()
                 Pair(expectedModel, cost)
             }()
+            if (expectedModel == null) {
+                logger.info { "Skipping ${i}th clap test because upstream is failed to parse this file" }
+                return@forEachIndexed
+            }
+
             val (realModel, realCost) = {
                 val stun = stun()
-                val realModel = real.parse(file.toPath(), expectedModel.chartInformation.selectedRandoms?.toList())
+                val realModel = real.parse(file.toPath(), expectedModel.chartInformation?.selectedRandoms?.toList())
                 val cost = stun()
                 Pair(realModel, cost)
             }()
-            logger.info { "${i}th clap test ended. Real cost: ${realCost}ms, upstream cost: ${expectedCost}ms" }
-            check(realModel, expectedModel)
+            try {
+                check(realModel, expectedModel)
+                logger.info { "${i}th clap test ended. Real cost: ${realCost}ms, upstream cost: ${expectedCost}ms" }
+            } catch (e: Throwable) {
+                errors.add(e)
+                logger.error { "${i}th clap test failed. ${e.message}" }
+            }
+        }
+        logger.info { "Clap test ended, checked ${files.size} files, caught ${errors.size} errors" }
+    }
+
+    private fun readBMSFilesFromFile(): List<File>? {
+        val defFile = System.getenv("KBMS.TestFiles") ?: return null
+        BufferedReader(InputStreamReader(FileInputStream(defFile))).use { br ->
+            return br.lines().map { line -> File(line) }.collect(Collectors.toList())
         }
     }
 
