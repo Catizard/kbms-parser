@@ -3,7 +3,6 @@ package io.github.catizard.kbms.parser
 import bms.model.*
 import io.github.catizard.kbms.parser.bms.BMSParser
 import io.github.catizard.kbms.parser.bms.logger
-import jdk.internal.org.jline.reader.impl.InputRC.configure
 import java.io.File
 import java.nio.file.Path
 import java.util.Locale.getDefault
