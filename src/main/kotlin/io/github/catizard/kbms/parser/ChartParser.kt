@@ -1,15 +1,15 @@
 package io.github.catizard.kbms.parser
 
-import bms.model.BMSModel
+import bms.model.*
 import io.github.catizard.kbms.parser.bms.BMSParser
-import bms.model.ChartInformation
-import bms.model.LongNoteDef
-import bms.model.Mode
-import bms.model.Timeline
 import io.github.catizard.kbms.parser.bms.logger
+import jdk.internal.org.jline.reader.impl.InputRC.configure
 import java.io.File
 import java.nio.file.Path
 import java.util.Locale.getDefault
+
+typealias ParserCreator = (config: ChartParserConfig) -> ChartParser
+typealias IsParserInterested = (path: Path) -> Boolean
 
 /**
  * Base class of all the chart parsers. All parsers must be implemented as stateless.
@@ -17,17 +17,28 @@ import java.util.Locale.getDefault
  */
 abstract class ChartParser(val config: ChartParserConfig) {
     companion object {
+        private val extraParsers: MutableList<Pair<IsParserInterested, ParserCreator>> = mutableListOf()
+
         fun create(path: Path, config: ChartParserConfig): ChartParser {
             val s = path.fileName.toString().lowercase(getDefault())
             return if (s.endsWith(".bmson")) {
                 TODO()
-            } else if (s.endsWith(".osu")) {
-                TODO()
             } else if (s.endsWith(".bms") || s.endsWith(".bme") || s.endsWith(".bml") || s.endsWith(".pms")) {
                 BMSParser(config)
             } else {
+                for ((interest, creator) in extraParsers) {
+                    if (interest(path)) {
+                        val parser = creator(config)
+                        return parser
+                    }
+                }
                 throw IllegalArgumentException("No related parser for file: $path")
             }
+        }
+
+        fun registerExtraParser(clazz: Class<*>, interest: IsParserInterested) {
+            val constructor = clazz.getDeclaredConstructor(ChartParserConfig::class.java)
+            extraParsers.add(Pair(interest) { config -> constructor.newInstance(config) as ChartParser })
         }
     }
 
