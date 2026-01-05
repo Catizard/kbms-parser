@@ -1,8 +1,8 @@
 import bms.model.BMSModel
 import bms.model.LongNoteDef
-import bms.model.note.LongNote
-import bms.model.note.MineNote
-import bms.model.note.Note
+import bms.model.LongNote
+import bms.model.MineNote
+import bms.model.Note
 import io.github.catizard.jbms.parser.BMSDecoder
 import io.github.catizard.kbms.parser.ChartParserConfig
 import io.github.catizard.kbms.parser.bms.BMSParser

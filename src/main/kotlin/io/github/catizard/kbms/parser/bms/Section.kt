@@ -6,9 +6,9 @@ import bms.model.Layer
 import bms.model.LayerSequence
 import bms.model.Mode
 import bms.model.Timeline
-import bms.model.note.LongNote
-import bms.model.note.MineNote
-import bms.model.note.NormalNote
+import bms.model.LongNote
+import bms.model.MineNote
+import bms.model.NormalNote
 import io.github.catizard.kbms.parser.parseInt36
 import io.github.catizard.kbms.parser.parseXX
 import java.util.*

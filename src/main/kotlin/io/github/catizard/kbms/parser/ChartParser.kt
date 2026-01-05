@@ -67,6 +67,7 @@ data class ChartParserConfig(
  * Context object used during parsing, any parser can extend it for extra fields
  */
 open class ParseContext(
+    val config: ChartParserConfig,
     val lnType: LongNoteDef = LongNoteDef.UNDEFINED,
     val randomStack: ArrayDeque<Int> = ArrayDeque(),
     val randomRecord: MutableList<Int> = mutableListOf(),

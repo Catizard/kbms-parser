@@ -1,17 +1,15 @@
-package bms.model.note
-
-import bms.model.LongNoteDef
+package bms.model
 
 abstract class Note(
     var section: Double = 0.0,
     var _time: Long = 0,
-    val wav: Int = 0,
+    var wav: Int = 0,
     val _start: Long = 0,
     val duration: Long = 0,
-    val state: Int = 0,
+    var state: Int = 0,
     var _playTime: Long = 0,
     val layeredNotes: List<Note> = listOf(),
-) {
+) : Cloneable {
     var microTime: Long
         get() = _time
         set(value) {
@@ -19,6 +17,8 @@ abstract class Note(
         }
     val milliTime: Long
         get() = _time / 1000
+
+    fun getTime(): Int = milliTime.toInt()
 
     val microStart: Long
         get() = _start
@@ -34,14 +34,17 @@ abstract class Note(
 
     val milliPlayTime: Long
         get() = _playTime / 1000
+
+    val playTime: Int
+        get() = milliPlayTime.toInt()
 }
 
-class LongNote(
+class LongNote @JvmOverloads constructor(
     wav: Int,
     start: Long,
     duration: Long,
     var type: LongNoteDef = LongNoteDef.UNDEFINED
-) : Note(wav = wav, _start = start, duration = duration) {
+) : Note(wav = wav, _start = start, duration = duration), Cloneable {
     var end: Boolean = false
     var pair: LongNote? = null
         private set
@@ -59,10 +62,12 @@ class LongNote(
         other.type = mergingType
     }
 
+    fun isEnd(): Boolean = end
+
     constructor(wav: Int, type: LongNoteDef = LongNoteDef.UNDEFINED) : this(wav, 0, 0, type)
 }
 
-class NormalNote(
+class NormalNote @JvmOverloads constructor(
     wav: Int,
     start: Long = 0,
     duration: Long = 0,
@@ -70,9 +75,9 @@ class NormalNote(
     wav = wav,
     _start = start,
     duration = duration
-)
+), Cloneable
 
 class MineNote(
     wav: Int,
     val damage: Double,
-) : Note(wav = wav)
+) : Note(wav = wav), Cloneable

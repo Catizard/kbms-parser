@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.2.10"
+    kotlin("jvm") version "1.9.10"
 }
 
 group = "io.github.catizard"

@@ -8,7 +8,7 @@ import bms.model.Mode
 import bms.model.Timeline
 import bms.model.TotalType
 import io.github.catizard.kbms.parser.convertHexString
-import bms.model.note.LongNote
+import bms.model.LongNote
 import io.github.catizard.kbms.parser.parseInt62
 import io.github.catizard.kbms.parser.ChartParser
 import io.github.catizard.kbms.parser.ChartParserConfig
@@ -48,7 +48,7 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
      */
     override fun parse(info: ChartInformation): BMSModel {
         logger.info { "Start parsing bms at ${info.path}" }
-        val ctx = BMSParseContext(selectedRandoms = info.selectedRandoms).apply {
+        val ctx = BMSParseContext(config, info.selectedRandoms).apply {
             val isPMS = info.path.toFile().toString().endsWith(".pms")
             if (isPMS) {
                 playMode = Mode.POPN_9K
@@ -146,7 +146,8 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
     }
 }
 
-class BMSParseContext(
+class BMSParseContext @JvmOverloads constructor(
+    config: ChartParserConfig,
     selectedRandoms: List<Int>? = null,
     var player: Int = 0,
     var genre: String = "",
@@ -167,7 +168,7 @@ class BMSParseContext(
     var lnMode: LongNoteDef = LongNoteDef.UNDEFINED,
     var difficulty: Int = 0,
     var banner: String = "",
-) : ParseContext(selectedRandoms = selectedRandoms) {
+) : ParseContext(config = config, selectedRandoms = selectedRandoms) {
     /**
      * Track => channel messages
      *
@@ -390,7 +391,11 @@ enum class CommandWord(val action: ReservedWord.Action<BMSParseContext>) {
             if (lnMode !in 0..3) {
                 logger.warn { "Unexpected value passed to #LNMODE" }
             } else {
-                LongNoteDef.fromLNMode(lnMode)?.let { ctx.lnMode = it }
+                if (ctx.config.usingLR2Mode) {
+                    ctx.lnMode = LongNoteDef.LONG_NOTE
+                } else {
+                    LongNoteDef.fromLNMode(lnMode)?.let { ctx.lnMode = it }
+                }
             }
         }
     }),
