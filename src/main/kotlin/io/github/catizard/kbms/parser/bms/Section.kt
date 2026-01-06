@@ -412,7 +412,7 @@ class Section {
                                 || lnList[key]?.any { longNote -> tl.section in longNote.section..longNote.pair!!.section } ?: false
 
                         if (!insideLN) {
-                            tl.setNote(key, MineNote(ctx.getWavID(0), data.toDouble()))
+                            tl.setNote(key, MineNote(wav = ctx.getWavID(0), damage = data.toDouble()))
                         } else {
                             logger.warn { "Conflict happens when trying to add mine note: ${key + 1}, time(ms): ${tl.milliTime}" }
                         }

@@ -1,19 +1,7 @@
 package io.github.catizard.kbms.parser.bms
 
-import bms.model.BMSModel
-import bms.model.ChartInformation
-import bms.model.JudgeRankType
-import bms.model.LongNoteDef
-import bms.model.Mode
-import bms.model.Timeline
-import bms.model.TotalType
-import io.github.catizard.kbms.parser.convertHexString
-import bms.model.LongNote
-import io.github.catizard.kbms.parser.parseInt62
-import io.github.catizard.kbms.parser.ChartParser
-import io.github.catizard.kbms.parser.ChartParserConfig
-import io.github.catizard.kbms.parser.ParseContext
-import io.github.catizard.kbms.parser.ReservedWord
+import bms.model.*
+import io.github.catizard.kbms.parser.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.BufferedReader
 import java.io.FileInputStream
@@ -59,7 +47,6 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
 
         val md5Digest = MessageDigest.getInstance("MD5")
         val sha256Digest = MessageDigest.getInstance("SHA-256")
-
 
         FileInputStream(info.path.toFile()).use { fis ->
             val duplexDigestInputStream = DigestInputStream(
@@ -148,27 +135,50 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
 
 class BMSParseContext @JvmOverloads constructor(
     config: ChartParserConfig,
-    selectedRandoms: List<Int>? = null,
-    var player: Int = 0,
-    var genre: String = "",
-    var title: String = "",
-    var subTitle: String = "",
-    var artist: String = "",
-    var subArtist: String = "",
-    var playLevel: String = "",
-    var judgeRank: Int = 2,
-    var judgeRankType: JudgeRankType = JudgeRankType.BMS_RANK,
-    var total: Double = 100.0,
-    var totalType: TotalType = TotalType.BMSON,
-    var volWAV: Int = 0,
-    var stageFile: String = "",
-    var backBMP: String = "",
-    var preview: String = "",
-    var lnObj: Int = -1,
-    var lnMode: LongNoteDef = LongNoteDef.UNDEFINED,
-    var difficulty: Int = 0,
-    var banner: String = "",
-) : ParseContext(config = config, selectedRandoms = selectedRandoms) {
+    val selectedRandoms: List<Int>? = null,
+) : ParseContext(config = config) {
+    private var selectedRandomCount = 0
+
+    /**
+     * Push one random number to stack top
+     */
+    fun pushNextRandom(r: Int) {
+        randomStack.addLast(
+            if (selectedRandoms != null) {
+                selectedRandomCount++
+                selectedRandoms[selectedRandomCount - 1]
+            } else {
+                val rng = (Math.random() * r).toInt() + 1
+                randomRecord.add(r)
+                rng
+            }
+        )
+    }
+
+    /**
+     * Pop one random number from stack top; do nothing if random stack is empty
+     */
+    fun popRandom() {
+        if (randomStack.isEmpty()) return logger.warn { "#ENDRANDOM doesn't have corresponding #RANDOM command" }
+        randomStack.removeLast()
+    }
+
+    /**
+     * Push one skip flag to stack top; do nothing if random stack is empty
+     */
+    fun pushSkipFlag(r: Int) {
+        if (randomStack.isEmpty()) return logger.warn { "#IF doesn't have corresponding #RANDOM command" }
+        skipStack.addLast(randomStack.last() != r)
+    }
+
+    /**
+     * Pop one skip flag from stack top; do nothing if skip stack is empty
+     */
+    fun popSkipFlag() {
+        if (skipStack.isEmpty()) return logger.warn { "#ENDIF doesn't have corresponding #RANDOM command" }
+        skipStack.removeLast()
+    }
+
     /**
      * Track => channel messages
      *
@@ -199,6 +209,33 @@ class BMSParseContext @JvmOverloads constructor(
             channelMessages[track] = mutableListOf()
         }
         channelMessages[track]?.add(line)
+    }
+
+    fun pushBPM(x1: Char, x2: Char, bpm: Double) {
+        val bpmID = parseXX(base, x1, x2) ?: return logger.warn { "NaN argument passed to #BPM" }
+        bpmTable[bpmID] = bpm
+    }
+
+    fun registerWAV(x1: Char, x2: Char, wavFileName: String) {
+        val wavID = parseXX(base, x1, x2) ?: return logger.warn { "NaN argument passed to #WAV" }
+        wavMap[wavID] = wavList.size
+        wavList.add(wavFileName)
+    }
+
+    fun registerBMP(x1: Char, x2: Char, bmpFileName: String) {
+        val bmpID = parseXX(base, x1, x2) ?: return logger.warn { "NaN argument passed to #BMP" }
+        bgaMap[bmpID] = bgaList.size
+        bgaList.add(bmpFileName)
+    }
+
+    fun registerStop(x1: Char, x2: Char, stop: Double) {
+        val stopID = parseXX(base, x1, x2) ?: return logger.warn { "NaN argument passed to #STOP" }
+        stopTable[stopID] = stop
+    }
+
+    fun registerScroll(x1: Char, x2: Char, scroll: Double) {
+        val scrollID = parseXX(base, x1, x2) ?: return logger.warn { "NaN argument passed to #SCROLL" }
+        scrollTable[scrollID] = scroll
     }
 }
 

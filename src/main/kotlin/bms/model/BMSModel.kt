@@ -1,7 +1,7 @@
 package bms.model
 
-import io.github.catizard.kbms.parser.bms.BMSParseContext
-import java.lang.StringBuilder
+import io.github.catizard.kbms.parser.ParseContext
+import kotlinx.serialization.Serializable
 import java.nio.file.Path
 
 data class BMSModel(
@@ -56,7 +56,7 @@ data class BMSModel(
     val wavList: Array<String>,
     val bgaList: Array<String>,
 ) {
-    constructor(ctx: BMSParseContext, info: ChartInformation, md5: String, sha256: String): this(
+    constructor(ctx: ParseContext, info: ChartInformation, md5: String, sha256: String) : this(
         player = ctx.player,
         mode = ctx.playMode,
         title = ctx.title,
@@ -236,6 +236,7 @@ data class Event(
     val interval: Int
 )
 
+@Serializable
 data class LayerSequence(
     val time: Long,
     val id: Int

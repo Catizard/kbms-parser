@@ -1,15 +1,19 @@
 package bms.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 abstract class Note(
     var section: Double = 0.0,
     var _time: Long = 0,
-    var wav: Int = 0,
-    val _start: Long = 0,
-    val duration: Long = 0,
     var state: Int = 0,
     var _playTime: Long = 0,
-    val layeredNotes: List<Note> = listOf(),
+    val layeredNotes: MutableList<Note> = mutableListOf(),
 ) : Cloneable {
+    abstract var wav: Int
+    abstract var _start: Long
+    abstract var duration: Long
+
     var microTime: Long
         get() = _time
         set(value) {
@@ -20,8 +24,11 @@ abstract class Note(
 
     fun getTime(): Int = milliTime.toInt()
 
-    val microStart: Long
+    var microStart: Long
         get() = _start
+        set(value) {
+            this._start = value
+        }
 
     val milliStart: Long
         get() = _start / 1000
@@ -37,14 +44,21 @@ abstract class Note(
 
     val playTime: Int
         get() = milliPlayTime.toInt()
+
+    fun addLayeredNote(note: Note?) {
+        note ?: return
+        note.section = section
+        note.microTime = microTime
+        layeredNotes.add(note)
+    }
 }
 
 class LongNote @JvmOverloads constructor(
-    wav: Int,
-    start: Long,
-    duration: Long,
+    override var wav: Int,
+    override var _start: Long,
+    override var duration: Long,
     var type: LongNoteDef = LongNoteDef.UNDEFINED
-) : Note(wav = wav, _start = start, duration = duration), Cloneable {
+) : Note(), Cloneable {
     var end: Boolean = false
     var pair: LongNote? = null
         private set
@@ -67,17 +81,17 @@ class LongNote @JvmOverloads constructor(
     constructor(wav: Int, type: LongNoteDef = LongNoteDef.UNDEFINED) : this(wav, 0, 0, type)
 }
 
+@Serializable
 class NormalNote @JvmOverloads constructor(
-    wav: Int,
-    start: Long = 0,
-    duration: Long = 0,
-) : Note(
-    wav = wav,
-    _start = start,
-    duration = duration
-), Cloneable
+    override var wav: Int,
+    override val _start: Long = 0,
+    override val duration: Long = 0,
+) : Note(), Cloneable
 
-class MineNote(
-    wav: Int,
+@Serializable
+class MineNote @JvmOverloads constructor(
+    override var wav: Int,
+    override val _start: Long = 0,
+    override val duration: Long = 0,
     val damage: Double,
-) : Note(wav = wav), Cloneable
+) : Note(), Cloneable
