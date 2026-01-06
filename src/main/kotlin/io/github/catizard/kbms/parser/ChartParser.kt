@@ -3,12 +3,10 @@ package io.github.catizard.kbms.parser
 import bms.model.*
 import io.github.catizard.kbms.parser.bms.BMSParser
 import io.github.catizard.kbms.parser.bms.logger
+import io.github.catizard.kbms.parser.osu.OSUParser
 import java.io.File
 import java.nio.file.Path
 import java.util.Locale.getDefault
-
-typealias ParserCreator = (config: ChartParserConfig) -> ChartParser
-typealias IsParserInterested = (path: Path) -> Boolean
 
 /**
  * Base class of all the chart parsers. All parsers must be implemented as stateless.
@@ -16,7 +14,6 @@ typealias IsParserInterested = (path: Path) -> Boolean
  */
 abstract class ChartParser(val config: ChartParserConfig) {
     companion object {
-        private val extraParsers: MutableList<Pair<IsParserInterested, ParserCreator>> = mutableListOf()
 
         fun create(path: Path, config: ChartParserConfig): ChartParser {
             val s = path.fileName.toString().lowercase(getDefault())
@@ -24,20 +21,11 @@ abstract class ChartParser(val config: ChartParserConfig) {
                 TODO()
             } else if (s.endsWith(".bms") || s.endsWith(".bme") || s.endsWith(".bml") || s.endsWith(".pms")) {
                 BMSParser(config)
+            } else if (s.endsWith(".osu")) {
+                OSUParser(config)
             } else {
-                for ((interest, creator) in extraParsers) {
-                    if (interest(path)) {
-                        val parser = creator(config)
-                        return parser
-                    }
-                }
                 throw IllegalArgumentException("No related parser for file: $path")
             }
-        }
-
-        fun registerExtraParser(clazz: Class<*>, interest: IsParserInterested) {
-            val constructor = clazz.getDeclaredConstructor(ChartParserConfig::class.java)
-            extraParsers.add(Pair(interest) { config -> constructor.newInstance(config) as ChartParser })
         }
     }
 
