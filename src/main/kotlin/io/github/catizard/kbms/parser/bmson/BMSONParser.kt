@@ -27,22 +27,14 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
 
     @OptIn(ExperimentalSerializationApi::class)
     override fun parse(info: ChartInformation): BMSModel {
-        val md5Digest = MessageDigest.getInstance("MD5")
-        val sha256Digest = MessageDigest.getInstance("SHA-256")
+        val digest = MessageDigest.getInstance("SHA-256")
 
         val bmson = Json.decodeFromStream<Bmson>(
-            DigestInputStream(
-                DigestInputStream(
-                    BufferedInputStream(Files.newInputStream(info.path)),
-                    md5Digest
-                ),
-                sha256Digest
-            )
+            DigestInputStream(BufferedInputStream(Files.newInputStream(info.path)), digest)
         )
-        val sha256 = convertHexString(sha256Digest.digest())
-        val md5 = convertHexString(md5Digest.digest())
+        val sha256 = convertHexString(digest.digest())
 
-        val ctx = BMSONParseContext(config)
+        val ctx = BMSONParseContext(config, bmson)
 
         val baseTimeline = Timeline(0.0, 0, ctx.keys, ctx.bpm)
         ctx.timelineCaches[0] = TimelineCache(0.0, baseTimeline)
@@ -96,7 +88,8 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
         ctx.timelines.addAll(ctx.timelineCaches.values.map { tlc -> tlc.timeline })
 
         val newInfo = ChartInformation(info.path, ctx.lnType, null)
-        return BMSModel(ctx, newInfo, md5, sha256)
+        // NOTE: Upstream doesn't build md5 info for bmson, I don't know why either
+        return BMSModel(ctx, newInfo, md5 = "", sha256 = sha256)
     }
 
     private fun processBGA(ctx: BMSONParseContext, bga: BGA) {

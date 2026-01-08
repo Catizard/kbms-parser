@@ -4,6 +4,8 @@ import bms.model.LongNote
 import bms.model.MineNote
 import bms.model.Note
 import io.github.catizard.jbms.parser.BMSDecoder
+import io.github.catizard.jbms.parser.ChartDecoder
+import io.github.catizard.kbms.parser.ChartParser
 import io.github.catizard.kbms.parser.ChartParserConfig
 import io.github.catizard.kbms.parser.bms.BMSParser
 import io.github.catizard.kbms.parser.stun
@@ -57,11 +59,10 @@ class SmokeTest {
             )
         } ?: return
 
-        val real = BMSParser(ChartParserConfig(true, LongNoteDef.LONG_NOTE))
-        val upstream = BMSDecoder()
         val errors = mutableListOf<Throwable>()
         files.forEachIndexed { i, file ->
             logger.info { "Running ${i}th clap test, file at ${file.path}" }
+            val upstream = ChartDecoder.getDecoder(file.toPath())
             val (expectedModel, expectedCost) = {
                 val stun = stun()
                 val expectedModel = upstream.decode(file)
@@ -73,6 +74,7 @@ class SmokeTest {
                 return@forEachIndexed
             }
 
+            val real = ChartParser.create(file.toPath(), ChartParserConfig(true, LongNoteDef.LONG_NOTE))
             val (realModel, realCost) = {
                 val stun = stun()
                 val realModel = real.parse(file.toPath(), expectedModel.chartInformation?.selectedRandoms?.toList())
@@ -84,7 +86,7 @@ class SmokeTest {
                 logger.info { "${i}th clap test ended. Real cost: ${realCost}ms, upstream cost: ${expectedCost}ms" }
             } catch (e: Throwable) {
                 errors.add(e)
-                logger.error { "${i}th clap test failed. ${e.message}" }
+                logger.error(e) { "${i}th clap test failed. ${e.message}" }
             }
         }
         logger.info { "Clap test ended, checked ${files.size} files, caught ${errors.size} errors" }
@@ -104,7 +106,7 @@ class SmokeTest {
             return bmsFiles
         }
 
-        val interestedExts = setOf("bms", "bme", "bml", "pms")
+        val interestedExts = setOf("bms", "bme", "bml", "pms", "bmson")
 
         fun walkDir(currentDir: File) {
             val files = currentDir.listFiles() ?: return
