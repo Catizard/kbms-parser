@@ -4,16 +4,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 abstract class Note(
+    var wav: Int,
+    var _start: Long,
+    var duration: Long,
     var section: Double = 0.0,
     var _time: Long = 0,
     var state: Int = 0,
     var _playTime: Long = 0,
     val layeredNotes: MutableList<Note> = mutableListOf(),
 ) : Cloneable {
-    abstract var wav: Int
-    abstract var _start: Long
-    abstract var duration: Long
-
     var microTime: Long
         get() = _time
         set(value) {
@@ -54,11 +53,11 @@ abstract class Note(
 }
 
 class LongNote @JvmOverloads constructor(
-    override var wav: Int,
-    override var _start: Long,
-    override var duration: Long,
+    wav: Int,
+    _start: Long,
+    duration: Long,
     var type: LongNoteDef = LongNoteDef.UNDEFINED
-) : Note(), Cloneable {
+) : Note(wav = wav, _start = _start, duration = duration), Cloneable {
     var end: Boolean = false
     var pair: LongNote? = null
         private set
@@ -81,17 +80,15 @@ class LongNote @JvmOverloads constructor(
     constructor(wav: Int, type: LongNoteDef = LongNoteDef.UNDEFINED) : this(wav, 0, 0, type)
 }
 
-@Serializable
 class NormalNote @JvmOverloads constructor(
-    override var wav: Int,
-    override val _start: Long = 0,
-    override val duration: Long = 0,
-) : Note(), Cloneable
+    wav: Int,
+    _start: Long = 0,
+    duration: Long = 0,
+) : Note(wav = wav, _start = _start, duration = duration), Cloneable
 
-@Serializable
 class MineNote @JvmOverloads constructor(
-    override var wav: Int,
-    override val _start: Long = 0,
-    override val duration: Long = 0,
+    wav: Int,
+    _start: Long = 0,
+    duration: Long = 0,
     val damage: Double,
-) : Note(), Cloneable
+) : Note(wav = wav, _start = _start, duration = duration), Cloneable

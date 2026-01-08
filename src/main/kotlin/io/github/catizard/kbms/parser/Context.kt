@@ -6,25 +6,25 @@ import bms.model.*
  * Context object used during parsing, any parser can extend it for extra fields
  */
 open class ParseContext(val config: ChartParserConfig) {
-    var player: Int = 0,
-    var genre: String = "",
-    var title: String = "",
-    var subTitle: String = "",
-    var artist: String = "",
-    var subArtist: String = "",
-    var playLevel: String = "",
-    var judgeRank: Int = 2,
-    var judgeRankType: JudgeRankType = JudgeRankType.BMS_RANK,
-    var total: Double = 100.0,
-    var totalType: TotalType = TotalType.BMSON,
-    var volWAV: Int = 0,
-    var stageFile: String = "",
-    var backBMP: String = "",
-    var preview: String = "",
-    var lnObj: Int = -1,
-    var lnMode: LongNoteDef = LongNoteDef.UNDEFINED,
-    var difficulty: Int = 0,
-    var banner: String = "",
+    var player: Int = 0
+    var genre: String = ""
+    var title: String = ""
+    var subTitle: String = ""
+    var artist: String = ""
+    var subArtist: String = ""
+    var playLevel: String = ""
+    var judgeRank: Int = 2
+    var judgeRankType: JudgeRankType = JudgeRankType.BMS_RANK
+    var total: Double = 100.0
+    var totalType: TotalType = TotalType.BMSON
+    var volWAV: Int = 0
+    var stageFile: String = ""
+    var backBMP: String = ""
+    var preview: String = ""
+    var lnObj: Int = -1
+    var lnMode: LongNoteDef = LongNoteDef.UNDEFINED
+    var difficulty: Int = 0
+    var banner: String = ""
     val lnType: LongNoteDef = LongNoteDef.UNDEFINED
     val randomStack: ArrayDeque<Int> = ArrayDeque()
     val randomRecord: MutableList<Int> = mutableListOf()
