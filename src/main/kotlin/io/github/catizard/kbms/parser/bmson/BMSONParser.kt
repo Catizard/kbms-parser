@@ -87,7 +87,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
 
         ctx.timelines.addAll(ctx.timelineCaches.values.map { tlc -> tlc.timeline })
 
-        val newInfo = ChartInformation(info.path, ctx.lnType, null)
+        val newInfo = ChartInformation.fromFile(info.path, ctx.lnType, null)
         // NOTE: Upstream doesn't build md5 info for bmson, I don't know why either
         return BMSModel(ctx, newInfo, md5 = "", sha256 = sha256)
     }

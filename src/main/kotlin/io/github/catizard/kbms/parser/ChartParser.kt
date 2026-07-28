@@ -7,6 +7,7 @@ import io.github.catizard.kbms.parser.bms.BMSParser
 import io.github.catizard.kbms.parser.bmson.BMSONParser
 import io.github.catizard.kbms.parser.osu.OSUParser
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Path
 import java.util.Locale.getDefault
 
@@ -41,7 +42,7 @@ abstract class ChartParser(val config: ChartParserConfig) {
         } else {
             config.lnType
         }
-        return parse(ChartInformation(path = path, lnType = lnType, selectedRandoms = selectedRandoms))
+        return parse(ChartInformation.fromFile(path = path, lnType = lnType, selectedRandoms = selectedRandoms))
     }
 
     abstract fun parse(info: ChartInformation): BMSModel

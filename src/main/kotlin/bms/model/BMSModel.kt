@@ -2,9 +2,11 @@ package bms.model
 
 import io.github.catizard.kbms.parser.ParseContext
 import kotlinx.serialization.Serializable
+import java.io.InputStream
 import java.nio.file.Path
+import kotlin.io.path.inputStream
+import kotlin.io.path.name
 
-@Serializable
 data class BMSModel(
     // Player count, normally 1 or 2
     val player: Int,
@@ -221,12 +223,50 @@ data class BMSModel(
     }
 }
 
-@Serializable
-data class ChartInformation(
+class ChartInformation private constructor(
     val path: Path,
+    val input: InputStream,
+    val isPMS: Boolean,
     val lnType: LongNoteDef,
     val selectedRandoms: List<Int>? = null,
-)
+) {
+    companion object {
+        fun fromFile(
+            path: Path,
+            lnType: LongNoteDef,
+            selectedRandoms: List<Int>? = null
+        ): ChartInformation {
+            val isPMS = path.name.endsWith(".pms", ignoreCase = true)
+
+            return ChartInformation(
+                path = path,
+                input = path.inputStream(),
+                isPMS = isPMS,
+                lnType = lnType,
+                selectedRandoms = selectedRandoms
+            )
+        }
+
+        /**
+         * A special constructor that allows you parse the bms file that is actually a stream. Obviously in this case,
+         *  path can only to be a placeholder. If you need use this form, I'm sure you don't need the path infomation
+         */
+        fun fromStream(
+            input: InputStream,
+            isPMS: Boolean,
+            lnType: LongNoteDef,
+            selectedRandoms: List<Int>? = null
+        ): ChartInformation {
+            return ChartInformation(
+                path = Path.of("fromStream"),
+                input = input,
+                isPMS = isPMS,
+                lnType = lnType,
+                selectedRandoms = selectedRandoms
+            )
+        }
+    }
+}
 
 data class Layer(
     val event: Event,

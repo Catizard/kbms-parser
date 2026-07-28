@@ -5,6 +5,7 @@ import io.github.catizard.kbms.parser.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.BufferedReader
 import java.io.FileInputStream
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.security.DigestInputStream
 import java.security.MessageDigest
@@ -37,8 +38,7 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
     override fun parse(info: ChartInformation): BMSModel {
         logger.info { "Start parsing bms at ${info.path}" }
         val ctx = BMSParseContext(config, info.selectedRandoms).apply {
-            val isPMS = info.path.toFile().toString().endsWith(".pms")
-            if (isPMS) {
+            if (info.isPMS) {
                 playMode = Mode.POPN_9K
             }
         }
@@ -48,9 +48,9 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
         val md5Digest = MessageDigest.getInstance("MD5")
         val sha256Digest = MessageDigest.getInstance("SHA-256")
 
-        FileInputStream(info.path.toFile()).use { fis ->
+        info.input.use { ins ->
             val duplexDigestInputStream = DigestInputStream(
-                DigestInputStream(fis, md5Digest),
+                DigestInputStream(ins, md5Digest),
                 sha256Digest
             )
 
@@ -92,7 +92,7 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
         val sha256 = convertHexString(sha256Digest.digest())
 
         val usedRandoms = ctx.selectedRandoms ?: ctx.randomRecord
-        val outputInfo = ChartInformation(info.path, ctx.lnType, usedRandoms)
+        val outputInfo = ChartInformation.fromFile(info.path, ctx.lnType, usedRandoms)
         return BMSModel(ctx, outputInfo, md5, sha256)
     }
 

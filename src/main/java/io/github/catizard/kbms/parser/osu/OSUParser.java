@@ -317,7 +317,7 @@ public class OSUParser extends ChartParser {
 			}
 		}
 
-		return new BMSModel(ctx, new ChartInformation(f, ctx.getLnType(), ctx.getSelectedRandoms()), md5, sha256);
+		return new BMSModel(ctx, ChartInformation.Companion.fromFile(f, ctx.getLnType(), ctx.getSelectedRandoms()), md5, sha256);
 	}
 
 	TimingPoints GetTimingPoint(ArrayList<TimingPoints> timingPoints, long time) {
