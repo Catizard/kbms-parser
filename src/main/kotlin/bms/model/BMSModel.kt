@@ -4,6 +4,7 @@ import io.github.catizard.kbms.parser.ParseContext
 import kotlinx.serialization.Serializable
 import java.nio.file.Path
 
+@Serializable
 data class BMSModel(
     // Player count, normally 1 or 2
     val player: Int,
@@ -220,6 +221,7 @@ data class BMSModel(
     }
 }
 
+@Serializable
 data class ChartInformation(
     val path: Path,
     val lnType: LongNoteDef,

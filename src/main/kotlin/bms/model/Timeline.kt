@@ -1,5 +1,8 @@
 package bms.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 class Timeline(
     // section
     // Time, unit is microsecond
