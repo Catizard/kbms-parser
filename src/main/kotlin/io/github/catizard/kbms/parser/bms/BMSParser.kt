@@ -91,9 +91,7 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
         val md5 = convertHexString(md5Digest.digest())
         val sha256 = convertHexString(sha256Digest.digest())
 
-        val usedRandoms = ctx.selectedRandoms ?: ctx.randomRecord
-        val outputInfo = ChartInformation.fromFile(info.path, ctx.lnType, usedRandoms)
-        return BMSModel(ctx, outputInfo, md5, sha256)
+        return BMSModel(ctx, info, md5, sha256)
     }
 
     private fun parseChannelMessages(ctx: BMSParseContext) {

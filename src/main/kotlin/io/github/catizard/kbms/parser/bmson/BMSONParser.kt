@@ -26,7 +26,6 @@ import kotlin.OptIn
 import kotlin.String
 import kotlin.arrayOf
 import kotlin.arrayOfNulls
-import kotlin.div
 import kotlin.emptyArray
 import kotlin.let
 
@@ -105,8 +104,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
 
         ctx.timelines.addAll(ctx.timelineCaches.values.map { tlc -> tlc.timeline })
 
-        val newInfo = ChartInformation.fromFile(info.path, ctx.lnType, null)
-        return BMSModel(ctx, newInfo, md5 = md5, sha256 = sha256)
+        return BMSModel(ctx, info, md5 = md5, sha256 = sha256)
     }
 
     private fun processBGA(ctx: BMSONParseContext, bga: BGA) {
