@@ -1,8 +1,6 @@
 package io.github.catizard.kbms.parser.bmson
 
-import kotlinx.serialization.Serializable
 
-@Serializable
 open class BMSONObject : Comparable<BMSONObject> {
     val y: Int = 0
 
@@ -11,7 +9,6 @@ open class BMSONObject : Comparable<BMSONObject> {
     }
 }
 
-@Serializable
 data class Note(
     val x: Int,
     val l: Int,
@@ -23,34 +20,28 @@ data class Note(
     val up: Boolean = false,
 ) : BMSONObject()
 
-@Serializable
 data class MineNote(
     val x: Int,
     val damage: Double
 ) : BMSONObject()
 
-@Serializable
 data class BarLine(
     val y: Int,
     val k: Int
 )
 
-@Serializable
 data class BpmEvent(
     val bpm: Double
 ) : BMSONObject()
 
-@Serializable
 data class StopEvent(
     val duration: Long
 ) : BMSONObject()
 
-@Serializable
 data class ScrollEvent(
     val rate: Double = 1.0
 ) : BMSONObject()
 
-@Serializable
 data class SoundChannel(
     val name: String,
     val notes: Array<Note> = emptyArray()
@@ -74,7 +65,6 @@ data class SoundChannel(
     }
 }
 
-@Serializable
 data class MineChannel(
     val name: String,
     val notes: Array<MineNote> = emptyArray()

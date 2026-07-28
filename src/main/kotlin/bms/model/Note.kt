@@ -1,8 +1,5 @@
 package bms.model
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 abstract class Note(
     var wav: Int,
     var _start: Long,

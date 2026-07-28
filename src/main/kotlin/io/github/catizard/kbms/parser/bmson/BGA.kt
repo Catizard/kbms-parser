@@ -2,9 +2,7 @@ package io.github.catizard.kbms.parser.bmson
 
 import bms.model.LayerSequence
 import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
-@Serializable
 data class BGA(
     @SerialName("bga_header") val bgaHeader: Array<BGAHeader> = emptyArray(),
     @SerialName("bga_sequence") val bgaSequence: Array<BGASequence> = emptyArray(),
@@ -37,13 +35,11 @@ data class BGA(
     }
 }
 
-@Serializable
 data class BGAHeader(
     val id: Int,
     val name: String
 )
 
-@Serializable
 data class BGASequence(
     val id: Int,
     val sequence: Array<LayerSequence> = emptyArray()
@@ -67,7 +63,6 @@ data class BGASequence(
     }
 }
 
-@Serializable
 data class BNote(
     val id: Int,
     @SerialName("id_set") val idSet: IntArray = intArrayOf(),
