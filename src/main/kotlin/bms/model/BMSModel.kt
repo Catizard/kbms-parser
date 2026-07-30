@@ -102,7 +102,9 @@ data class BMSModel(
 
     fun getPath(): String = info.path.toString()
 
-    fun getLastTime(): Int = getLastMilliTime().toInt()
+    fun getLastTime(): Int {
+        return getLastMilliTime().toInt()
+    }
 
     fun getLastMilliTime(): Long {
         for (i in timelines.lastIndex downTo 0) {
