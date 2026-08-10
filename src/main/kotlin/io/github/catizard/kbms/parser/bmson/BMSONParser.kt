@@ -10,6 +10,7 @@ import io.github.catizard.kbms.parser.convertHexString
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import java.io.BufferedInputStream
@@ -384,6 +385,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
     }
 }
 
+@Serializable
 data class Bmson(
     @SerialName("version") val version: String,
     @SerialName("info") val info: BMSInfo,
@@ -530,6 +532,7 @@ class BMSONParseContext(
     }
 }
 
+@Serializable
 data class BMSInfo(
     @SerialName("title") val title: String = "",
     @SerialName("subtitle") val subTitle: String = "",

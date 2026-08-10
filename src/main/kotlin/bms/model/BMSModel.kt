@@ -1,6 +1,7 @@
 package bms.model
 
 import io.github.catizard.kbms.parser.ParseContext
+import kotlinx.serialization.Serializable
 import java.io.InputStream
 import java.nio.file.Path
 import kotlin.io.path.inputStream
@@ -279,6 +280,7 @@ data class Event(
     val interval: Int
 )
 
+@Serializable
 data class LayerSequence(
     val time: Long,
     val id: Int
