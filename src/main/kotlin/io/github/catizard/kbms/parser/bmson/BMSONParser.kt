@@ -294,7 +294,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
                     continue
                 }
                 var insideln = false
-                if (ctx.lnList[key] != null) {
+                if (key < ctx.lnList.size && ctx.lnList[key] != null) {
                     val section: Double = (n.y / ctx.resolution)
                     for (ln in ctx.lnList[key]!!) {
                         if (ln.section < section && section <= ln.pair!!.section) {
@@ -353,10 +353,12 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
                                 end.setNote(key, lnend)
                                 ln.type = LongNoteDef.fromLNMode(n.t) ?: ctx.lnMode
                                 ln.connectPair(lnend)
-                                if (ctx.lnList[key] == null) {
-                                    ctx.lnList[key] = ArrayList<LongNote>()
+                                if (key < ctx.lnList.size) {
+                                    if (ctx.lnList[key] == null) {
+                                        ctx.lnList[key] = ArrayList<LongNote>()
+                                    }
+                                    ctx.lnList[key]!!.add(ln)
                                 }
-                                ctx.lnList[key]!!.add(ln)
                             }
                         }
                     } else {
@@ -551,7 +553,7 @@ data class BMSInfo(
     @SerialName("banner_image") val bannerImage: String = "",
     @SerialName("preview_music") val previewMusic: String = "",
     @SerialName("resolution") val resolution: Int = 240,
-    @SerialName("ln_type") val lnType: Int,
+    @SerialName("ln_type") val lnType: Int = 0,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -13,13 +13,13 @@ open class BMSONObject : Comparable<BMSONObject> {
 
 @Serializable
 data class Note(
-    val x: Int,
-    val l: Int,
+    val x: Int = 0,
+    val l: Int = 0,
     /**
      * Whether to resume playback from where the sound source was last played
      */
-    val c: Boolean,
-    val t: Int,
+    val c: Boolean = false,
+    val t: Int = 0,
     val up: Boolean = false,
 ) : BMSONObject()
 
@@ -31,8 +31,8 @@ data class MineNote(
 
 @Serializable
 data class BarLine(
-    val y: Int,
-    val k: Int
+    val y: Int = 0,
+    val k: Int = 0
 )
 
 @Serializable

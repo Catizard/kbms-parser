@@ -71,8 +71,8 @@ data class BGASequence(
 data class BNote(
     val id: Int,
     @SerialName("id_set") val idSet: IntArray = intArrayOf(),
-    val condition: String,
-    val interval: Int
+    val condition: String = "",
+    val interval: Int = 0
 ) : BMSONObject() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
