@@ -101,7 +101,9 @@ data class BMSModel(
 
     fun getAllTimelines(): Array<Timeline> = timelines.toTypedArray()
 
-    fun getPath(): String = info.path.toString()
+    fun getPath(): String {
+        return info.path.toString()
+    }
 
     fun getLastTime(): Int {
         return getLastMilliTime().toInt()
