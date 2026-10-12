@@ -110,9 +110,6 @@ class BMSParser(config: ChartParserConfig) : ChartParser(config) {
         timelines[0.0] = TimelineCache(0.0, baseTimeline)
         sections.forEach { section -> section.processTimeline(ctx, lnList, lnEndStatus) }
         ctx.timelines.addAll(timelines.values.map { tlc -> tlc.timeline })
-        if (ctx.timelines[0].bpm == 0.0) {
-            throw IllegalArgumentException("Failed to parse BMS: initial bpm is corrupted")
-        }
 
         lnEndStatus.forEachIndexed { lane, note ->
             note ?: return@forEachIndexed
