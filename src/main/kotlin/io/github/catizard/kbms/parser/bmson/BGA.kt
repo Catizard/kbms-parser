@@ -69,6 +69,7 @@ data class BGASequence(
 
 @Serializable
 data class BNote(
+    override val y: Int = 0,
     val id: Int,
     @SerialName("id_set") val idSet: IntArray = intArrayOf(),
     val condition: String = "",

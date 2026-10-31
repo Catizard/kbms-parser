@@ -3,8 +3,16 @@ package io.github.catizard.kbms.parser.bmson
 import kotlinx.serialization.Serializable
 
 
-open class BMSONObject : Comparable<BMSONObject> {
-    val y: Int = 0
+/**
+ * Base class of all the bmson objects which are placed at some position `y`.
+ *
+ * NOTE: `y` used to be declared here as `val y: Int = 0`. kotlinx.serialization only
+ * deserializes primary-constructor properties, so every subclass silently got `y = 0`
+ * for *all* of its entries (notes/BPM/stop/scroll/BGA events were all stuck at position 0).
+ * It must therefore live in the primary constructor of the concrete (serializable) classes.
+ */
+abstract class BMSONObject : Comparable<BMSONObject> {
+    abstract val y: Int
 
     override fun compareTo(other: BMSONObject): Int {
         return y - other.y
@@ -13,6 +21,7 @@ open class BMSONObject : Comparable<BMSONObject> {
 
 @Serializable
 data class Note(
+    override val y: Int = 0,
     val x: Int = 0,
     val l: Int = 0,
     /**
@@ -25,6 +34,7 @@ data class Note(
 
 @Serializable
 data class MineNote(
+    override val y: Int = 0,
     val x: Int,
     val damage: Double
 ) : BMSONObject()
@@ -37,16 +47,19 @@ data class BarLine(
 
 @Serializable
 data class BpmEvent(
+    override val y: Int = 0,
     val bpm: Double
 ) : BMSONObject()
 
 @Serializable
 data class StopEvent(
+    override val y: Int = 0,
     val duration: Long
 ) : BMSONObject()
 
 @Serializable
 data class ScrollEvent(
+    override val y: Int = 0,
     val rate: Double = 1.0
 ) : BMSONObject()
 

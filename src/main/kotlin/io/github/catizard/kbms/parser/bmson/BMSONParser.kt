@@ -110,66 +110,71 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
 
     private fun processBGA(ctx: BMSONParseContext, bga: BGA) {
         // BGA処理
-        val bgamap = arrayOfNulls<String>(bga.bgaHeader.size)
-        val idmap: MutableMap<Int?, Int?> = HashMap<Int?, Int?>(bga.bgaHeader.size)
+        // NOTE: BGA ids are arbitrary in bmson, so we keep a id -> index of ctx.bgaList map.
+        //  Timeline::bgaID (and LayerSequence::id) is an index into bgaList, which is exactly
+        //  the convention BMSParser uses (see ParseContext::getBgaID).
+        val idmap: MutableMap<Int, Int> = HashMap(bga.bgaHeader.size)
         val seqmap: MutableMap<Int, List<LayerSequence>> = mutableMapOf()
-        for (i in bga.bgaHeader.indices) {
-            val bh: BGAHeader = bga.bgaHeader[i]
-            bgamap[i] = bh.name
-            idmap[bh.id] = i
+        for (bh in bga.bgaHeader) {
+            idmap[bh.id] = ctx.bgaList.size
+            ctx.bgaList.add(bh.name)
         }
         for (n in bga.bgaSequence) {
             val sequence: MutableList<LayerSequence> = ArrayList(n.sequence.size)
-            for (i in sequence.indices) {
-                val seq: LayerSequence = n.sequence[i]
-                if (seq.id != Int.MIN_VALUE) {
-                    sequence[i] = LayerSequence(seq.time, seq.id)
+            for (seq in n.sequence) {
+                if (seq.id == LayerSequence.END) {
+                    sequence.add(LayerSequence.endSequence(seq.time))
+                    continue
+                }
+                val id = idmap[seq.id]
+                if (id == null) {
+                    logger.warn { "bga_sequence に存在しないBGA IDが含まれています - sequence id : ${n.id}, bga id : ${seq.id}" }
                 } else {
-                    sequence[i] = LayerSequence.endSequence(seq.time)
+                    sequence.add(LayerSequence(seq.time, id))
                 }
             }
             seqmap[n.id] = sequence
         }
         for (n in bga.bgaEvents) {
-            ctx.getTimeline(n.y).bgaID = idmap[n.id]!!
+            val id = idmap[n.id]
+            if (id == null) {
+                logger.warn { "bga_events に存在しないBGA IDが含まれています - id : ${n.id}, y : ${n.y}" }
+                continue
+            }
+            ctx.getTimeline(n.y).bgaID = id
         }
         for (n in bga.layerEvents) {
             val idset = n.idSet
-            val seqs: MutableList<List<LayerSequence>> = ArrayList<List<LayerSequence>>(seqmap.size)
-            var event: Event? = null
-            when (n.condition) {
-                "play" -> event = Event(
-                    EventType.PLAY,
-                    n.interval
-                )
-
-                "miss" -> event = Event(
-                    EventType.MISS,
-                    n.interval
-                )
-
-                else -> event = Event(
-                    EventType.ALWAYS,
-                    n.interval
-                )
+            val seqs: MutableList<List<LayerSequence>> = ArrayList(idset.size)
+            val event = when (n.condition) {
+                "play" -> Event(EventType.PLAY, n.interval)
+                "miss" -> Event(EventType.MISS, n.interval)
+                else -> Event(EventType.ALWAYS, n.interval)
             }
-            for (seqindex in seqs.indices) {
-                val nid = idset[seqindex]
-                if (seqmap.containsKey(nid)) {
-                    seqs[seqindex] = seqmap[nid]!!
-                } else {
-                    seqs[seqindex] = listOf(
-                        LayerSequence(0, idmap[n.id]!!), LayerSequence.endSequence(500)
-                    )
+            val fallbackId = idmap[n.id]
+            if (fallbackId == null) {
+                logger.warn { "layer_events に存在しないBGA IDが含まれています - id : ${n.id}, y : ${n.y}" }
+            }
+            for (nid in idset) {
+                val seq = seqmap[nid]
+                if (seq != null) {
+                    seqs.add(seq)
+                } else if (fallbackId != null) {
+                    seqs.add(listOf(LayerSequence(0, fallbackId), LayerSequence.endSequence(500)))
                 }
             }
             ctx.getTimeline(n.y).eventLayer = listOf(Layer(event, seqs))
-
         }
         for (n in bga.poorEvents) {
-            if (seqmap.containsKey(n.id)) {
+            val id = idmap[n.id]
+            if (id == null) {
+                logger.warn { "poor_events に存在しないBGA IDが含まれています - id : ${n.id}, y : ${n.y}" }
+                continue
+            }
+            val seq = seqmap[n.id]
+            if (seq != null) {
                 ctx.getTimeline(n.y).eventLayer = listOf(
-                    Layer(Event(EventType.MISS, 1), listOf(seqmap[n.id]!!))
+                    Layer(Event(EventType.MISS, 1), listOf(seq))
                 )
             } else {
                 ctx.getTimeline(n.y).eventLayer =
@@ -178,7 +183,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
                             Event(EventType.MISS, 1),
                             listOf(
                                 listOf(
-                                    LayerSequence(0, idmap[n.id]!!),
+                                    LayerSequence(0, id),
                                     LayerSequence.endSequence(500)
                                 )
                             )
@@ -199,7 +204,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
 
                 ctx.getKeyLane(n.x)?.let { key: Int ->
                     var insideln = false
-                    if (ctx.lnList[key] != null) {
+                    if (key < ctx.lnList.size && ctx.lnList[key] != null) {
                         val section: Double = (n.y / ctx.resolution)
                         for (ln in ctx.lnList[key]!!) {
                             if (ln.section < section && section <= ln.pair!!.section) {
@@ -274,7 +279,7 @@ class BMSONParser(config: ChartParserConfig): ChartParser(config) {
                 if (n.up) {
                     // LN終端音定義
                     var assigned = false
-                    if (ctx.lnList[key] != null) {
+                    if (key < ctx.lnList.size && ctx.lnList[key] != null) {
                         val section: Double = (n.y / ctx.resolution)
                         for (ln in ctx.lnList[key]!!) {
                             val pair = ln.pair!!
@@ -453,7 +458,11 @@ class BMSONParseContext(
 ) : ParseContext(config = config) {
     val timelineCaches: TreeMap<Int, TimelineCache> = TreeMap()
     var resolution: Double = 0.0
-    val lnList: Array<MutableList<LongNote>?> = arrayOfNulls(keys)
+    // NOTE: playMode (and thus keys) is resolved in the secondary constructor from
+    //  bmson.info.modeHint, which runs *after* field initializers. Allocating here eagerly
+    //  would always use the default Mode.BEAT_5K (6 lanes) and make lnList too short for
+    //  beat-7k/10k/14k charts, causing ArrayIndexOutOfBoundsException on lane >= 6.
+    val lnList: Array<MutableList<LongNote>?> by lazy { arrayOfNulls(keys) }
     val lnup: MutableMap<Note, LongNote> = mutableMapOf()
     var keyAssign: Array<Int?> = arrayOfNulls(0)
 
